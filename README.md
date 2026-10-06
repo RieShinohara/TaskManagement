@@ -25,6 +25,6 @@ Trello風のカンバン方式託す管理アプリです。
 - 他の人との共有
 
 ## 学習・開発環境
-- Cursoe
+- Cursor
 - Claude Code
 - Git / GitHub

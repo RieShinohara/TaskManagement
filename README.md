@@ -16,6 +16,9 @@ AIエンジニア養成コースの初級課題として、開発するリポジ
 ## ドキュメント
 - [要件定義書](docs/requirements.md)：背景・目的、範囲の概要、各ドキュメント（機能一覧、ユースケース、画面設計、非機能要件、データ設計、技術スタック）へのリンク
 
+## プロトタイプ
+- [prototype/](prototype/)：要件を動かして確認するための、使い捨ての試作（HTML / CSS / JavaScript）。`prototype/index.html` をChromeで開くと、動かせる
+
 ## 学習・開発環境
 - Cursor
 - Claude Code

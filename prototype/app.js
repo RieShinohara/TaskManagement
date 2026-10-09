@@ -16,7 +16,12 @@
   function pad(n) { return (n < 10 ? '0' : '') + n; }
   function ymd(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
   function addDays(n) { var d = new Date(); d.setDate(d.getDate() + n); return ymd(d); }
-  function fmtDue(s) { var p = s.split('-'); return Number(p[1]) + '/' + Number(p[2]); }
+  // 期限の表示：「期限 10月12日」。年は、今年と違うときだけ付ける（例：期限 2027年1月15日）
+  function fmtDue(s) {
+    var p = s.split('-');
+    var year = Number(p[0]) !== new Date().getFullYear() ? Number(p[0]) + '年' : '';
+    return '期限 ' + year + Number(p[1]) + '月' + Number(p[2]) + '日';
+  }
   // 期限切れ：期限日が今日より前で、完了列以外にあるカード
   function isOverdue(card, colId) { return !!card.due && card.due < ymd(new Date()) && colId !== 'done'; }
 
@@ -26,6 +31,17 @@
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
   }
+
+  // ---------- アイコン（線画のSVG。形は、Lucide / Feather に基づく。どちらも無料で使える） ----------
+  function svg(inner) {
+    return '<svg viewBox="0 0 24 24" aria-hidden="true">' + inner + '</svg>';
+  }
+  var ICONS = {
+    palette: svg('<circle cx="13.5" cy="6.5" r="1"/><circle cx="17.5" cy="10.5" r="1"/><circle cx="8.5" cy="7.5" r="1"/><circle cx="6.5" cy="12.5" r="1"/>' +
+      '<path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/>'),
+    calendar: svg('<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>'),
+    pencil: svg('<path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>')
+  };
 
   // ---------- データ ----------
   // state.cols[列].cards の並び順が、そのまま画面の上からの順番になる
@@ -102,9 +118,9 @@
     return '<div class="' + cls + '" data-id="' + card.id + '" draggable="true">' +
       '<div class="title">' + esc(card.title) + '</div>' + due +
       '<div class="actions">' +
-        '<button class="icon" title="色" data-action="color" data-id="' + card.id + '">🎨</button>' +
-        '<button class="icon" title="期限" data-action="due" data-id="' + card.id + '">📅</button>' +
-        '<button class="icon" title="編集" data-action="edit" data-id="' + card.id + '">✎</button>' +
+        '<button class="icon" title="色" data-action="color" data-id="' + card.id + '">' + ICONS.palette + '</button>' +
+        '<button class="icon" title="期限" data-action="due" data-id="' + card.id + '">' + ICONS.calendar + '</button>' +
+        '<button class="icon" title="編集" data-action="edit" data-id="' + card.id + '">' + ICONS.pencil + '</button>' +
       '</div></div>';
   }
 
@@ -116,8 +132,8 @@
       '<div class="hint">Enterで追加　Escで取り消し</div>' +
       due +
       '<div class="actions">' +
-        '<button class="icon" title="色" data-action="draft-color">🎨</button>' +
-        '<button class="icon" title="期限" data-action="draft-due">📅</button>' +
+        '<button class="icon" title="色" data-action="draft-color">' + ICONS.palette + '</button>' +
+        '<button class="icon" title="期限" data-action="draft-due">' + ICONS.calendar + '</button>' +
       '</div></div>';
   }
 

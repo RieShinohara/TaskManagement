@@ -1,0 +1,269 @@
+/* ===== 色・大きさの定義（ここを直すと、画面全体に反映される） ===== */
+:root {
+  --bg: #fafbfd;     /* ボードの外側（ほぼ白） */
+  --col: #e9edf5;    /* 列の背景 */
+  --col-line: #d8dfed; /* 列の枠線（薄め） */
+  --text: #1f2937;
+  --muted: #6b7280;
+  --line: #d5dbe8;
+  --accent: #4f7cff;
+  --danger: #dc2626;
+  --radius: 12px;
+
+  /* カードの背景色（彩度を抑えた淡い色） */
+  --c-none: #ffffff;
+  --c-red: #fde4e4;
+  --c-blue: #dfeafd;
+  --c-green: #dff5e6;
+  --c-yellow: #fdf4cf;
+  --c-gray: #e7e9ee;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Segoe UI", "Hiragino Sans", "Yu Gothic UI", Meiryo, sans-serif;
+  font-size: 16px;
+}
+
+/* ===== ヘッダー ===== */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  background: #ffffff;
+  border-bottom: 1px solid var(--line);
+}
+header h1 { margin: 0; font-size: 22px; }
+header .tools { display: flex; gap: 8px; }
+
+.btn {
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--text);
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font: inherit;
+}
+.btn:hover { background: #f1f4fa; }
+.btn.danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+.btn.danger:hover { background: #b91c1c; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* ===== ボードと列 ===== */
+#board {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  padding: 20px 24px;
+  overflow-x: auto;  /* 画面が狭いときは、横にスクロールできる */
+}
+.column {
+  flex: 0 0 320px;   /* 幅を固定（画面いっぱいに広げない） */
+  background: var(--col);
+  border: 1px solid var(--col-line);
+  border-radius: var(--radius);
+  padding: 12px;
+}
+.column-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.column-head h2 { margin: 0; font-size: 18px; }
+.column-head .right { display: flex; gap: 6px; }
+.mini {
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 6px;
+  padding: 3px 10px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+}
+.mini:hover { background: #f1f4fa; }
+.cards { min-height: 64px; display: flex; flex-direction: column; gap: 8px; }
+
+/* ===== カード ===== */
+.card {
+  position: relative;
+  background: var(--c-none);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 10px;
+  padding: 10px 12px;
+  /* ドロップシャドウ：近くの濃い影と、遠くの淡い影を重ねて、自然に浮かせる */
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.07), 0 3px 8px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+  cursor: grab;
+}
+.card.c-red { background: var(--c-red); }
+.card.c-blue { background: var(--c-blue); }
+.card.c-green { background: var(--c-green); }
+.card.c-yellow { background: var(--c-yellow); }
+.card.c-gray { background: var(--c-gray); }
+/* マウスを乗せたとき：影を強くして、少し浮き上がらせる */
+.card:hover:not(.dragging) {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12), 0 8px 18px rgba(0, 0, 0, 0.14);
+  transform: translateY(-2px);
+}
+.card.dragging { opacity: 0.4; }
+.card .title { word-break: break-word; white-space: pre-wrap; }
+
+.card .due {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--muted);
+  font-size: 14px;
+  cursor: pointer;
+}
+.card .due.overdue { color: var(--danger); font-weight: 600; }
+
+/* マウスを乗せたときに出るアイコン */
+.card .actions {
+  display: flex;
+  gap: 4px;
+  justify-content: flex-end;
+  margin-top: 6px;
+  height: 30px;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.card:hover .actions,
+.card.draft .actions { opacity: 1; }
+.icon {
+  width: 32px;
+  height: 30px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 0;
+  font-size: 16px;
+  line-height: 1;
+}
+.icon:hover { background: #fff; }
+
+/* タイトルの入力欄と、編集メニュー */
+.title-input {
+  width: 100%;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font: inherit;
+  background: #fff;
+}
+.menu {
+  margin-top: 8px;
+  padding: 6px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.menu button {
+  border: 0;
+  background: transparent;
+  text-align: left;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font: inherit;
+}
+.menu button:hover { background: #f1f4fa; }
+.menu button.danger { color: var(--danger); }
+
+/* 入力欄の下の、操作の案内 */
+.hint { margin-top: 4px; font-size: 13px; color: var(--muted); }
+
+/* ドラッグ中に、入る位置を示す線 */
+.drop-line { height: 3px; background: var(--accent); border-radius: 3px; }
+
+/* ===== 色見本・カレンダー（カードの近くに出る小さな窓） ===== */
+#pop {
+  position: absolute;
+  z-index: 20;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  padding: 10px;
+}
+#pop[hidden] { display: none; }
+.swatches { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.swatch {
+  width: 76px;
+  height: 38px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text);
+}
+.swatch:hover { outline: 2px solid var(--accent); }
+/* 自作のカレンダー */
+.calendar { width: 280px; display: flex; flex-direction: column; gap: 6px; }
+.cal-head { display: flex; align-items: center; justify-content: space-between; }
+.cal-title { font-weight: 600; }
+.cal-nav {
+  width: 32px;
+  height: 30px;
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+  font: inherit;
+}
+.cal-nav:hover { background: #f1f4fa; }
+.cal-week, .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; }
+.cal-week div { font-size: 13px; color: var(--muted); padding: 2px 0; }
+.cal-week div:first-child, .cal-grid .day:nth-child(7n + 1) { color: #d9534f; }
+.cal-week div:last-child, .cal-grid .day:nth-child(7n) { color: #3b6fd4; }
+.day {
+  height: 34px;
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+}
+.day:hover { background: #eef2fb; }
+.day.other { opacity: 0.35; }
+.day.today { border-color: var(--accent); }
+.cal-grid .day.selected { background: var(--accent); color: #fff; opacity: 1; }
+.cal-clear { margin-top: 4px; }
+
+/* ===== 確認メッセージ ===== */
+#overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+#overlay[hidden] { display: none; }
+.modal {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px 22px;
+  min-width: 300px;
+  max-width: 420px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+}
+.modal p { margin: 0 0 16px; line-height: 1.6; }
+.modal .row { display: flex; justify-content: flex-end; gap: 8px; }
+
+footer { padding: 0 24px 24px; color: var(--muted); font-size: 14px; }

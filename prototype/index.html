@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TaskBoard プロトタイプ</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>TaskBoard（プロトタイプ）</h1>
+    <div class="tools">
+      <button class="btn" id="btn-backup">バックアップ</button>
+      <button class="btn" id="btn-import">読み込み</button>
+      <input type="file" id="file-import" accept="application/json,.json" hidden>
+    </div>
+  </header>
+
+  <!-- 3つの列は、app.js が、ここに表示する -->
+  <main id="board"></main>
+
+  <footer>プロトタイプです。データは、このブラウザの中にだけ保存されます（データベースは、まだ使っていません）。</footer>
+
+  <!-- 色見本・カレンダー（カードの近くに出る小さな窓） -->
+  <div id="pop" hidden></div>
+  <!-- 確認メッセージ -->
+  <div id="overlay" hidden><div class="modal" id="modal"></div></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

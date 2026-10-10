@@ -12,6 +12,11 @@
     ['green', '緑'], ['yellow', '黄'], ['gray', 'グレー']
   ];
 
+  // 背景の選択肢（自動＝時間帯で、青空・夕焼け・星空が切り替わる）
+  var BACKGROUNDS = [
+    ['plain', '無地'], ['sky', '青空'], ['sunset', '夕焼け'], ['night', '星空'], ['auto', '自動（時間帯）']
+  ];
+
   // ---------- 日付・文字列のヘルパー ----------
   function pad(n) { return (n < 10 ? '0' : '') + n; }
   function ymd(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
@@ -80,6 +85,26 @@
   }
 
   var state = load() || initialState();
+
+  // ---------- 背景 ----------
+  // 設定（選んだ背景）も state の中に持つ。保存・バックアップに、一緒に含まれる
+  function normalizeSettings(s) {
+    var ok = BACKGROUNDS.some(function (b) { return s && b[0] === s.background; });
+    return { background: ok ? s.background : 'plain' };
+  }
+  state.settings = normalizeSettings(state.settings);
+
+  // 自動のときの時間帯：5時〜16時は青空、16時〜18時は夕焼け、18時〜翌5時は星空
+  function bgForNow() {
+    var h = new Date().getHours();
+    if (h >= 5 && h < 16) return 'sky';
+    if (h >= 16 && h < 18) return 'sunset';
+    return 'night';
+  }
+  function applyBackground() {
+    var id = state.settings.background === 'auto' ? bgForNow() : state.settings.background;
+    document.body.className = 'bg-' + id;
+  }
   // ui：画面の一時的な状態（保存しない）
   //   adding：追加中のカード　edit：編集中のカード　drag：ドラッグ中のカード
   var ui = { adding: null, edit: null, drag: null };
@@ -231,6 +256,22 @@
     };
     placePop(anchor);
   }
+  // 背景の選択（色見本と同じ、小さな窓。選ぶとすぐ反映されて閉じる）
+  function openBackgroundPicker(anchor) {
+    closePop();
+    pop.innerHTML = '<div class="bg-list">' + BACKGROUNDS.map(function (b) {
+      var sel = state.settings.background === b[0] ? ' selected' : '';
+      return '<button class="bg-item' + sel + '" data-bg="' + b[0] + '">' +
+        '<span class="bg-thumb bg-' + b[0] + '"></span><span>' + b[1] + '</span></button>';
+    }).join('') + '</div>';
+    pop.onclick = function (e) {
+      var b = e.target.closest('[data-bg]');
+      if (b) { state.settings.background = b.dataset.bg; save(); applyBackground(); closePop(); }
+    };
+    placePop(anchor);
+  }
+  document.getElementById('btn-bg').addEventListener('click', function (e) { openBackgroundPicker(e.currentTarget); });
+
   // 窓の外を押したら閉じる
   document.addEventListener('click', function (e) {
     if (!pop.hidden && !pop.contains(e.target) && !e.target.closest('[data-action]')) closePop();
@@ -421,7 +462,7 @@
   document.getElementById('btn-backup').addEventListener('click', function () {
     var now = new Date();
     var stamp = ymd(now).replace(/-/g, '') + '-' + pad(now.getHours()) + pad(now.getMinutes()) + pad(now.getSeconds());
-    var data = { app: 'taskboard', version: 1, exportedAt: now.toISOString(), cols: state.cols };
+    var data = { app: 'taskboard', version: 1, exportedAt: now.toISOString(), cols: state.cols, settings: state.settings };
     var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     var a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -449,14 +490,18 @@
       showModal('現在のデータは、すべて置き換わります。よろしいですか？', [
         { label: 'キャンセル' },
         { label: '読み込む', cls: 'danger', onClick: function () {
-          state = { cols: obj.cols };
+          state = { cols: obj.cols, settings: normalizeSettings(obj.settings) };
           ui = { adding: null, edit: null, drag: null };
-          save(); render();
+          save(); applyBackground(); render();
         } }
       ]);
     };
     reader.readAsText(file);
   });
 
+  // 背景が「自動」のとき、画面を開いたままでも、時間が来たら切り替わるようにする（30秒ごとに確認）
+  setInterval(function () { if (state.settings.background === 'auto') applyBackground(); }, 30000);
+
+  applyBackground();
   render();
 })();

@@ -103,7 +103,71 @@
   }
   function applyBackground() {
     var id = state.settings.background === 'auto' ? bgForNow() : state.settings.background;
-    document.body.className = 'bg-' + id;
+    var url = customUrls[id]; // 自分の画像が登録されていれば、グラデーションの代わりに使う
+    document.body.className = 'bg-' + id + (url ? ' has-img' : '');
+    if (url) document.body.style.setProperty('--bg-image', 'url("' + url + '")');
+    else document.body.style.removeProperty('--bg-image');
+  }
+
+  // ---------- 自分の画像（青空・夕焼け・星空に、それぞれ割り当てられる） ----------
+  // 画像はブラウザの中（IndexedDB）にだけ保存する。外部には送らない。バックアップにも含めない
+  var IMAGE_SLOTS = ['sky', 'sunset', 'night'];
+  var IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+  var MAX_IMAGE_WIDTH = 1920;   // 登録するとき、横がこれより大きければ縮小する
+  var MAX_FILE_MB = 20;         // これより大きいファイルは、受け付けない
+  var customUrls = {};          // 登録済みの画像の、表示用のURL（例：{ sky: 'blob:...' }）
+
+  function openDb() {
+    return new Promise(function (resolve, reject) {
+      var req = indexedDB.open('taskboard-prototype', 1);
+      req.onupgradeneeded = function () { req.result.createObjectStore('images'); };
+      req.onsuccess = function () { resolve(req.result); };
+      req.onerror = function () { reject(req.error); };
+    });
+  }
+  function dbRun(mode, fn) {
+    return openDb().then(function (db) {
+      return new Promise(function (resolve, reject) {
+        var tx = db.transaction('images', mode);
+        var request = fn(tx.objectStore('images'));
+        tx.oncomplete = function () { db.close(); resolve(request ? request.result : undefined); };
+        tx.onerror = function () { db.close(); reject(tx.error); };
+      });
+    });
+  }
+  function imgPut(slot, blob) { return dbRun('readwrite', function (s) { return s.put(blob, slot); }); }
+  function imgDelete(slot) { return dbRun('readwrite', function (s) { return s.delete(slot); }); }
+  function imgGet(slot) { return dbRun('readonly', function (s) { return s.get(slot); }); }
+
+  function setCustomImage(slot, blob) {
+    if (customUrls[slot]) URL.revokeObjectURL(customUrls[slot]);
+    if (blob) customUrls[slot] = URL.createObjectURL(blob);
+    else delete customUrls[slot];
+  }
+  // 画面を開いたとき、登録済みの画像を読み込む
+  function loadCustomImages() {
+    Promise.all(IMAGE_SLOTS.map(imgGet)).then(function (blobs) {
+      blobs.forEach(function (b, i) { if (b) setCustomImage(IMAGE_SLOTS[i], b); });
+      applyBackground();
+    }).catch(function () { /* 保存先が使えない環境では、グラデーションのまま */ });
+  }
+
+  // 横が1920pxより大きければ縮小し、JPEGにして返す（小さい画像は、拡大しない）
+  function resizeImage(file) {
+    return createImageBitmap(file).then(function (bmp) {
+      var w = Math.min(MAX_IMAGE_WIDTH, bmp.width);
+      var h = Math.round(bmp.height * w / bmp.width);
+      var canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      var ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff'; // 透明な部分は、白で埋める
+      ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(bmp, 0, 0, w, h);
+      if (bmp.close) bmp.close();
+      return new Promise(function (resolve, reject) {
+        canvas.toBlob(function (b) { if (b) resolve(b); else reject(new Error('変換できませんでした')); }, 'image/jpeg', 0.85);
+      });
+    });
   }
   // ui：画面の一時的な状態（保存しない）
   //   adding：追加中のカード　edit：編集中のカード　drag：ドラッグ中のカード
@@ -257,24 +321,69 @@
     placePop(anchor);
   }
   // 背景の選択（色見本と同じ、小さな窓。選ぶとすぐ反映されて閉じる）
+  //   青空・夕焼け・星空には、「画像を選ぶ」（自分の画像を割り当てる）と、「元に戻す」（登録済みのとき）がある
+  var bgButton = document.getElementById('btn-bg');
   function openBackgroundPicker(anchor) {
     closePop();
     pop.innerHTML = '<div class="bg-list">' + BACKGROUNDS.map(function (b) {
-      var sel = state.settings.background === b[0] ? ' selected' : '';
-      return '<button class="bg-item' + sel + '" data-bg="' + b[0] + '">' +
-        '<span class="bg-thumb bg-' + b[0] + '"></span><span>' + b[1] + '</span></button>';
+      var id = b[0];
+      var url = customUrls[id];
+      var sel = state.settings.background === id ? ' selected' : '';
+      var thumbStyle = url ? ' style="background:url(\'' + url + '\') center / cover"' : '';
+      var extra = '';
+      if (IMAGE_SLOTS.indexOf(id) >= 0) {
+        extra = '<button class="bg-mini" data-bg-image="' + id + '">画像を選ぶ</button>' +
+          (url ? '<button class="bg-mini" data-bg-reset="' + id + '">元に戻す</button>' : '');
+      }
+      return '<div class="bg-row"><button class="bg-item' + sel + '" data-bg="' + id + '">' +
+        '<span class="bg-thumb bg-' + id + '"' + thumbStyle + '></span><span>' + b[1] + '</span></button>' + extra + '</div>';
     }).join('') + '</div>';
     pop.onclick = function (e) {
-      var b = e.target.closest('[data-bg]');
-      if (b) { state.settings.background = b.dataset.bg; save(); applyBackground(); closePop(); }
+      var pick = e.target.closest('[data-bg-image]');
+      var reset = e.target.closest('[data-bg-reset]');
+      var item = e.target.closest('[data-bg]');
+      if (pick) chooseImage(pick.dataset.bgImage);
+      else if (reset) resetImage(reset.dataset.bgReset);
+      else if (item) { state.settings.background = item.dataset.bg; save(); applyBackground(); closePop(); }
     };
     placePop(anchor);
   }
-  document.getElementById('btn-bg').addEventListener('click', function (e) { openBackgroundPicker(e.currentTarget); });
+  bgButton.addEventListener('click', function () { openBackgroundPicker(bgButton); });
+
+  // 画像を選ぶ：ファイルの選択画面を開く。選んだら、縮小して保存し、その背景に切り替える
+  var bgFile = document.getElementById('file-bg');
+  var bgSlot = null;
+  function chooseImage(slot) { bgSlot = slot; bgFile.click(); }
+  function showImageError(message) { showModal(message, [{ label: '閉じる', cls: 'primary' }]); }
+  bgFile.addEventListener('change', function () {
+    var file = bgFile.files[0];
+    var slot = bgSlot;
+    bgFile.value = '';
+    if (!file || !slot) return;
+    if (IMAGE_TYPES.indexOf(file.type) < 0) { showImageError('このファイルは読み込めません。画像（JPEG・PNG・WebP）を選んでください。'); return; }
+    if (file.size > MAX_FILE_MB * 1024 * 1024) { showImageError('ファイルが大きすぎます（' + MAX_FILE_MB + 'MBまで）。'); return; }
+    resizeImage(file).then(function (blob) {
+      return imgPut(slot, blob).then(function () {
+        setCustomImage(slot, blob);
+        state.settings.background = slot; // 登録した背景に切り替えて、すぐ見られるようにする
+        save(); applyBackground();
+        if (!pop.hidden) openBackgroundPicker(bgButton);
+      });
+    }).catch(function () { showImageError('このファイルは読み込めません。'); });
+  });
+  // 元に戻す：登録した画像を消して、グラデーションに戻す
+  function resetImage(slot) {
+    imgDelete(slot).then(function () {
+      setCustomImage(slot, null);
+      applyBackground();
+      if (!pop.hidden) openBackgroundPicker(bgButton);
+    }).catch(function () { showImageError('元に戻せませんでした。'); });
+  }
 
   // 窓の外を押したら閉じる
   document.addEventListener('click', function (e) {
-    if (!pop.hidden && !pop.contains(e.target) && !e.target.closest('[data-action]')) closePop();
+    // ※ 画像のファイル選択（file-bg）を開く操作は、窓の外のクリックとは扱わない
+    if (!pop.hidden && !pop.contains(e.target) && !e.target.closest('[data-action]') && e.target.id !== 'file-bg') closePop();
   });
 
   // 入力欄の外を押したとき（追加・編集とも、同じルール）
@@ -503,5 +612,6 @@
   setInterval(function () { if (state.settings.background === 'auto') applyBackground(); }, 30000);
 
   applyBackground();
+  loadCustomImages();
   render();
 })();

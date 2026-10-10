@@ -63,6 +63,12 @@ body[class] { background-attachment: fixed; }
   background-repeat: repeat, repeat, repeat, repeat, repeat, no-repeat;
 }
 
+/* 自分の画像を登録した背景：画像を全面に広げ、薄い暗幕（20%）を重ねて、文字を読みやすくする */
+body.has-img {
+  background: linear-gradient(rgba(0, 0, 0, 0.20), rgba(0, 0, 0, 0.20)), var(--bg-image) center / cover no-repeat fixed;
+}
+body.has-img footer { color: #fff; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6); }
+
 /* 自動：選択の窓の見本だけ（朝・夕方・夜の3色を並べる） */
 .bg-auto { background: linear-gradient(90deg, #8cc7f2 0 33%, #e8736a 33% 66%, #121c4a 66% 100%); }
 
@@ -305,7 +311,20 @@ header .tools { display: flex; gap: 8px; }
 .cal-clear { margin-top: 4px; }
 
 /* 背景の選択（小さな窓） */
-.bg-list { display: flex; flex-direction: column; gap: 6px; min-width: 210px; }
+.bg-list { display: flex; flex-direction: column; gap: 6px; min-width: 380px; }
+.bg-row { display: flex; align-items: center; gap: 6px; }
+.bg-row .bg-item { flex: 1; }
+.bg-mini {
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 6px;
+  padding: 3px 8px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.bg-mini:hover { background: #f1f4fa; }
 .bg-item {
   display: flex;
   align-items: center;

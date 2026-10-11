@@ -23,7 +23,7 @@ Aさんのみ（1人）
 | [画面設計](screen-design.md) | ボード画面の構成、カードの表示、操作アイコン、背景、確認メッセージ |
 | [非機能要件](non-functional-requirements.md) | 動作環境、データの保存、性能・容量、バックアップ、セキュリティ、使いやすさ、権利 |
 | [データ設計](data-design.md) | 保存するデータの構造（ER図） |
-| [技術スタック](tech-stack.md) | 使用する技術（現時点では未決定） |
+| [技術スタック](tech-stack.md) | 使用する技術（Java・Spring Boot、React、PostgreSQL） |
 
 ## 4. 範囲の概要
 - ToDo / 作業中 / 完了 の3つの列に、タスクをカードとして並べて管理する

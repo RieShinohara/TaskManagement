@@ -37,21 +37,21 @@
 | Spring Bootのバージョン | **4.1.1**（確定：2026-10-12） | 現行の最新安定版。Java 25 に対応 |
 | ビルド・依存管理（サーバー側） | Gradle 9.8.1（プロジェクトに同梱の Gradle Wrapper で実行） | 講義の表でも推奨として挙げられており、講義の説明をそのまま参考にできる。講義では「各自の推奨でよい」とされている |
 | データベースへの接続 | Spring Data JPA ＋ PostgreSQLドライバ | SQLを直接書かずに、Javaのクラスでデータを扱える |
-| データベースの構造の管理 | Flyway | テーブル定義を、ファイルとして記録・再現できる |
+| データベースの構造の管理 | 当面は JPA の `ddl-auto: update`（講義と同じ）。将来 Flyway を検討 | Entity（Javaのクラス）からテーブルを自動で作る。Flyway は、テーブル定義をファイルとして記録・再現できる |
 | Node.js | LTS版 | 画面側の開発に必要 |
 | 開発用のPostgreSQL | **Docker（Docker Desktop）で起動。PostgreSQL 18**（確定：2026-10-13） | Windowsを汚さず、起動・停止・削除が1行でできる |
 | テスト | JUnit ＋ Testcontainers（サーバー側）、Vitest（画面側） | テストのときだけ、使い捨てのPostgreSQLをDockerで起動する |
 
 ## 4. 未決定の項目
 - 上の「案」の最終確認（バージョンを含む）
-- テーブルの作り方（Flyway か、JPAの自動作成 `ddl-auto` か）
+- テーブルの作り方の見直し（現在は講義に合わせて JPA の自動作成 `ddl-auto: update`。テーブル定義を記録に残したくなったら Flyway を導入する）
 - 開発環境の構築手順
 
 ## 5. 現在の開発環境
 - 利用している道具：Cursor、Claude Code、Git / GitHub
 - Java 25（Eclipse Temurin、winget でインストール）：導入済み（2026-10-12）
 - Gradle：インストール不要（`backend/` の Gradle Wrapper が自動で取得する）
-- バックエンドの雛型：`backend/` に作成済み。起動と動作確認まで済み（使い方は [backend/README.md](../backend/README.md)）
+- バックエンド：`backend/` に作成済み。列・カードのAPI（列の一覧、カードの追加・一覧）が動作確認済み（2026-10-13。使い方は [backend/README.md](../backend/README.md)）
 - PostgreSQL 18：Docker で起動できる状態（`docker-compose.yml`）。SQLの確認（INSERT / SELECT / DELETE）と、バックエンドからの接続は確認済み（2026-10-13）
 - Docker Desktop：導入済み
 - Node.js：未インストール

@@ -1,0 +1,24 @@
+# 開発用のPostgreSQLを起動する設定。
+#   起動: docker compose up -d
+#   停止: docker compose down        （データは残る）
+#   完全に消す: docker compose down -v （データも消える）
+services:
+  db:
+    image: postgres:18
+    container_name: taskmanagement-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  db-data:

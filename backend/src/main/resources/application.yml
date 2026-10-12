@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: taskmanagement
+  config:
+    # リポジトリ直下の .env から、DBの接続情報を読み込む（backend/ から見て1つ上）
+    import: optional:file:../.env[.properties]
+  datasource:
+    url: jdbc:postgresql://localhost:5432/${POSTGRES_DB:taskmanagement}
+    username: ${POSTGRES_USER:taskmanagement}
+    password: ${POSTGRES_PASSWORD}
+  jpa:
+    hibernate:
+      # テーブルは、まだ作らない。作り方は次のステップで決める
+      ddl-auto: none

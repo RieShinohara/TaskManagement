@@ -38,13 +38,13 @@
 | ビルド・依存管理（サーバー側） | Gradle 9.8.1（プロジェクトに同梱の Gradle Wrapper で実行） | 講義の表でも推奨として挙げられており、講義の説明をそのまま参考にできる。講義では「各自の推奨でよい」とされている |
 | データベースへの接続 | Spring Data JPA ＋ PostgreSQLドライバ | SQLを直接書かずに、Javaのクラスでデータを扱える |
 | データベースの構造の管理 | Flyway | テーブル定義を、ファイルとして記録・再現できる |
-| テスト | JUnit（サーバー側）、Vitest（画面側） | それぞれの標準的な選択 |
 | Node.js | LTS版 | 画面側の開発に必要 |
-| 開発用のPostgreSQL | Windowsに直接インストール、またはDocker | 環境構築のときに相談して決める |
+| 開発用のPostgreSQL | **Docker（Docker Desktop）で起動。PostgreSQL 18**（確定：2026-10-13） | Windowsを汚さず、起動・停止・削除が1行でできる |
+| テスト | JUnit ＋ Testcontainers（サーバー側）、Vitest（画面側） | テストのときだけ、使い捨てのPostgreSQLをDockerで起動する |
 
 ## 4. 未決定の項目
 - 上の「案」の最終確認（バージョンを含む）
-- データベースの起動方法（直接インストールか、Dockerか）
+- テーブルの作り方（Flyway か、JPAの自動作成 `ddl-auto` か）
 - 開発環境の構築手順
 
 ## 5. 現在の開発環境
@@ -52,4 +52,6 @@
 - Java 25（Eclipse Temurin、winget でインストール）：導入済み（2026-10-12）
 - Gradle：インストール不要（`backend/` の Gradle Wrapper が自動で取得する）
 - バックエンドの雛型：`backend/` に作成済み。起動と動作確認まで済み（使い方は [backend/README.md](../backend/README.md)）
-- Node.js、PostgreSQL は未インストール
+- PostgreSQL 18：Docker で起動できる状態（`docker-compose.yml`）。SQLの確認（INSERT / SELECT / DELETE）と、バックエンドからの接続は確認済み（2026-10-13）
+- Docker Desktop：導入済み
+- Node.js：未インストール

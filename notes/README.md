@@ -8,6 +8,7 @@ AIエンジニア養成コースの学習記録です。Claude Codeと一緒に�
 | [02-requirements-process.md](02-requirements-process.md) | 要件定義の進め方と、現場の考え方 |
 | [03-prototype-guide.md](03-prototype-guide.md) | プロトタイプ（HTML / CSS / JavaScript）の仕組み |
 | [04-glossary.md](04-glossary.md) | 用語集 |
+| [05-backend-guide.md](05-backend-guide.md) | バックエンド（Java + Spring Boot、PostgreSQL、Docker）の仕組みと、動かし方 |
 
 ## このノートの使い方
 - 分からない言葉が出たら、まず [用語集](04-glossary.md) を見る

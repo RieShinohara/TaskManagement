@@ -10,5 +10,7 @@ spring:
     password: ${POSTGRES_PASSWORD}
   jpa:
     hibernate:
-      # テーブルは、まだ作らない。作り方は次のステップで決める
-      ddl-auto: none
+      # Entity（Javaのクラス）に合わせて、起動時にテーブルを自動で作る・足りない列を足す
+      ddl-auto: update
+    # 実行されるSQLをログに出す（学習用）
+    show-sql: true

@@ -1,12 +1,16 @@
 package com.example.taskmanagement.controller;
 
+import java.time.LocalDate;
 import java.util.List;
 
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -33,9 +37,17 @@ public class BoardController {
 		return boardService.findColumns();
 	}
 
+	// 絞り込みは、どれも省略できる。例：/api/cards?columnId=1&keyword=買い&dueBefore=2026-10-20
 	@GetMapping("/cards")
-	public List<CardResponse> getCards() {
-		return boardService.findCards();
+	public List<CardResponse> getCards(@RequestParam(required = false) Long columnId,
+			@RequestParam(required = false) String keyword,
+			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dueBefore) {
+		return boardService.findCards(columnId, keyword, dueBefore);
+	}
+
+	@GetMapping("/cards/{id}")
+	public CardResponse getCard(@PathVariable Long id) {
+		return boardService.findCard(id);
 	}
 
 	@PostMapping("/cards")

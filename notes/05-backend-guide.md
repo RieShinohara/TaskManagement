@@ -116,8 +116,29 @@ GET http://localhost:8080/api/columns
 |---|---|
 | `GET /api/health` | 動作確認。`{"status":"ok"}` |
 | `GET /api/columns` | 列の一覧 |
-| `GET /api/cards` | カードの一覧 |
+| `GET /api/cards` | カードの一覧。絞り込みができる |
+| `GET /api/cards/{id}` | カードを1件取得 |
 | `POST /api/cards` | カードの追加 |
+
+### 絞り込み検索：クエリパラメータ
+URLの `?` のあとに、条件を付ける。`&` で、つなげる。
+
+```
+GET /api/cards?columnId=1&keyword=買&dueBefore=2026-10-15
+                ↑列で         ↑タイトルに含む  ↑期限日がこの日以前
+```
+- どの条件も、省略できる。省略した条件は、無視される（全部省略すれば、全件）
+- **SQLの `WHERE` と同じ考え方**。APIの結果と、SQLの結果が、一致することを確かめた
+
+| APIの条件 | SQLで書くと |
+|---|---|
+| `dueBefore=2026-10-15` | `WHERE due_date <= '2026-10-15'` |
+| `keyword=買` | `WHERE title LIKE '%買%'` |
+| `columnId=2` | `WHERE column_id = 2` |
+
+### サンプルデータの投入
+`backend/sql/sample-data.sql` に、カード10件の `INSERT` を書いて、`psql` で流し込む。
+**先に `TRUNCATE`（全部消す）をする**ので、何度流しても、同じ状態になる。流し込む手順は、[backend/README.md](../backend/README.md) を参照。
 
 ## 7. ソースの層（役割分担）
 カードを追加する、お願いの流れ。
@@ -190,6 +211,7 @@ public class Card {
 | 雛型を自動で作るサービス（Spring Initializr）が、500エラーだった | サービス側の不調。**同じ内容を手で作れた**ので、仕組みが分かっていれば、止まらない。エラーは、サーバー側（500）か、こちら側（400番台）かを見る |
 | テストの名前に「、」を使って、コンパイルエラー | Javaの名前に使えない文字がある。日本語は使えても、句読点は不可 |
 | 講義の画面と、書き方が違う（`.yml` と `.properties`、Gradle の設定の書き方） | 書き方が違うだけで、役割は同じ。講義と見比べて、迷ったら聞く |
+| 絞り込みの条件が空（null）のとき、PostgreSQLが「型が分からない」とエラー（`could not determine data type of parameter`）。テストが失敗して気づいた | DBは、値が空だと、型を判断できないことがある。`cast(:条件 as 型)` で、型をはっきり指定して直した。**テストがあったから、見つけられた** |
 | `ddl-auto` や Flyway を、どちらにするか | 前に決めたことでも、**講義の流れが分かったら、変えてよい**。理由を残しておく |
 
 ## 11. やってみよう

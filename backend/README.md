@@ -42,8 +42,19 @@
 |---|---|
 | `GET /api/health` | 動作確認。`{"status":"ok"}` が返る |
 | `GET /api/columns` | 列（ToDo / 作業中 / 完了）の一覧。表示順 |
-| `GET /api/cards` | カードの一覧。列の順、列の中の並び順 |
+| `GET /api/cards` | カードの一覧。列の順、列の中の並び順。絞り込みができる（下記） |
+| `GET /api/cards/{id}` | カードを1件取得する。ないIDは `404` |
 | `POST /api/cards` | カードを追加する（下記） |
+
+絞り込み（どれも省略できる。組み合わせられる）:
+
+| 条件 | 意味 | 例 |
+|---|---|---|
+| `columnId` | その列のカードだけ | `/api/cards?columnId=2` |
+| `keyword` | タイトルに、その文字を含む（大文字小文字は区別しない） | `/api/cards?keyword=買` |
+| `dueBefore` | 期限日が、その日以前（期限なしのカードは含まない） | `/api/cards?dueBefore=2026-10-15` |
+
+組み合わせの例：`/api/cards?columnId=1&dueBefore=2026-10-16`。日付の形が不正なら `400`。
 
 カードの追加（PowerShell の例）:
 ```powershell
@@ -55,6 +66,17 @@ Invoke-RestMethod http://localhost:8080/api/cards -Method Post -ContentType "app
 - タイトルが空・色が不正なら `400`、存在しない列なら `404`
 
 テーブルは、バックエンドの起動時に Entity（Javaのクラス）から自動で作られる（`ddl-auto: update`）。列の最初の3件も、起動時に入る。
+
+## サンプルデータの投入
+動作確認用に、カード10件のサンプルデータを、SQLで投入できる（[backend/sql/sample-data.sql](sql/sample-data.sql)）。
+**先に、カードを全部消してから入れる**ので、今あるカードは、入れ替わる。何度流しても、同じ状態になる。
+
+リポジトリ直下で、DBとバックエンドを一度起動したあと（列ができたあと）に、実行する。
+
+```
+docker compose cp backend/sql/sample-data.sql db:/tmp/sample-data.sql
+docker compose exec db psql -U taskmanagement -d taskmanagement -f /tmp/sample-data.sql
+```
 
 ## ソースの層
 | 層 | フォルダ | 役割 |
@@ -70,6 +92,7 @@ Invoke-RestMethod http://localhost:8080/api/cards -Method Post -ContentType "app
 backend/
 ├── build.gradle        ビルドの設定（使う部品、Javaのバージョンなど）
 ├── settings.gradle     プロジェクト名
+├── sql/                サンプルデータのSQL
 ├── gradlew.bat など    Gradle Wrapper（Gradleを自動で用意する仕組み）
 └── src/
     ├── main/java/…     プログラム本体

@@ -1,5 +1,6 @@
 package com.example.taskmanagement.service;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
@@ -32,10 +33,19 @@ public class BoardService {
 		return columnRepository.findAllByOrderBySortOrderAsc().stream().map(ColumnResponse::from).toList();
 	}
 
+	// 絞り込みの条件は、どれも省略できる（null）。省略したものは、無視する
 	@Transactional(readOnly = true)
-	public List<CardResponse> findCards() {
-		return cardRepository.findAllByOrderByColumnSortOrderAscPositionAsc().stream().map(CardResponse::from)
+	public List<CardResponse> findCards(Long columnId, String keyword, LocalDate dueBefore) {
+		String normalizedKeyword = (keyword == null || keyword.isBlank()) ? null : keyword.strip();
+		return cardRepository.search(columnId, normalizedKeyword, dueBefore).stream().map(CardResponse::from)
 				.toList();
+	}
+
+	@Transactional(readOnly = true)
+	public CardResponse findCard(Long id) {
+		Card card = cardRepository.findById(id)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "カードが見つかりません: " + id));
+		return CardResponse.from(card);
 	}
 
 	@Transactional

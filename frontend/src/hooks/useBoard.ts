@@ -10,9 +10,10 @@ export type BoardState =
 // 取得の結果と、どの検索条件の結果かを、セットで持つ
 type Fetched = { search: CardSearch; result: Exclude<BoardState, { status: 'loading' }> }
 
-// 列とカードを取得する。検索の条件が変わったら、取り直す
-export function useBoard(search: CardSearch): BoardState {
+// 列とカードを取得する。検索の条件が変わったら、取り直す。reload() でも、取り直せる
+export function useBoard(search: CardSearch): { board: BoardState; reload: () => void } {
   const [fetched, setFetched] = useState<Fetched | null>(null)
+  const [reloadCount, setReloadCount] = useState(0) // 増やすと、effect が動いて取り直す
 
   useEffect(() => {
     let cancelled = false // 古い問い合わせの結果で、画面を上書きしないため
@@ -29,8 +30,10 @@ export function useBoard(search: CardSearch): BoardState {
     return () => {
       cancelled = true
     }
-  }, [search])
+  }, [search, reloadCount])
 
-  // 今の検索条件の結果がまだ届いていなければ「読み込み中」
-  return fetched !== null && fetched.search === search ? fetched.result : { status: 'loading' }
+  // 今の検索条件の結果がまだ届いていなければ「読み込み中」（取り直し中は、前の結果を出したままにする）
+  const board: BoardState =
+    fetched !== null && fetched.search === search ? fetched.result : { status: 'loading' }
+  return { board, reload: () => setReloadCount((n) => n + 1) }
 }

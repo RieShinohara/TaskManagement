@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import App from './App'
@@ -78,4 +78,89 @@ test('サーバーに接続できないときは、エラーを表示する', as
   vi.stubGlobal('fetch', vi.fn(() => Promise.reject(new TypeError('Failed to fetch'))))
   render(<App />)
   expect(await screen.findByRole('alert')).toHaveTextContent('サーバーに接続できません')
+})
+
+// POST を受けると、カードを一番上（position が最小）に足して、次の GET から返すモック
+function mockApiWithCreate() {
+  const stored = [...cards]
+  const fn = vi.fn((url: string, init?: RequestInit) => {
+    if (init?.method === 'POST') {
+      const body = JSON.parse(init.body as string)
+      const created: Card = { id: 99, ...body, position: -1 }
+      stored.push(created)
+      return Promise.resolve({ ok: true, status: 201, json: async () => created } as Response)
+    }
+    return Promise.resolve({
+      ok: true,
+      json: async () => (url.startsWith('/api/columns') ? columns : stored),
+    } as Response)
+  })
+  vi.stubGlobal('fetch', fn)
+  return fn
+}
+
+test('「＋」から入力して Enter を押すと、列の一番上にカードが追加される', async () => {
+  const fn = mockApiWithCreate()
+  const user = userEvent.setup()
+  render(<App />)
+  await screen.findByRole('region', { name: 'ToDo' })
+
+  await user.click(screen.getByRole('button', { name: 'ToDoにカードを追加' }))
+  await user.type(screen.getByPlaceholderText('タイトルを入力してください'), '新しいカード')
+  await user.click(screen.getByRole('button', { name: '赤' }))
+  await user.type(screen.getByLabelText('期限'), '2030-05-01')
+  await user.keyboard('{Enter}')
+
+  const post = fn.mock.calls.find(([, init]) => init?.method === 'POST')
+  expect(JSON.parse(post![1]!.body as string)).toEqual({
+    title: '新しいカード',
+    columnId: 1,
+    color: 'red',
+    dueDate: '2030-05-01',
+  })
+  await waitFor(() => {
+    const titles = within(screen.getByRole('region', { name: 'ToDo' }))
+      .getAllByRole('listitem')
+      .map((li) => li.textContent)
+    expect(titles[0]).toContain('新しいカード')
+  })
+  expect(screen.queryByPlaceholderText('タイトルを入力してください')).not.toBeInTheDocument()
+})
+
+test('Esc で入力欄を閉じる。空のタイトルは送信しない', async () => {
+  const fn = mockApiWithCreate()
+  const user = userEvent.setup()
+  render(<App />)
+  await screen.findByRole('region', { name: 'ToDo' })
+
+  await user.click(screen.getByRole('button', { name: 'ToDoにカードを追加' }))
+  await user.keyboard('{Escape}')
+  expect(screen.queryByPlaceholderText('タイトルを入力してください')).not.toBeInTheDocument()
+
+  await user.click(screen.getByRole('button', { name: 'ToDoにカードを追加' }))
+  await user.keyboard('{Enter}')
+  expect(screen.queryByPlaceholderText('タイトルを入力してください')).not.toBeInTheDocument()
+  expect(fn.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false)
+})
+
+test('追加に失敗したら、エラーを表示して入力欄を残す', async () => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((url: string, init?: RequestInit) =>
+      Promise.resolve(
+        init?.method === 'POST'
+          ? ({ ok: false, status: 400 } as Response)
+          : ({ ok: true, json: async () => (url.startsWith('/api/columns') ? columns : cards) } as Response),
+      ),
+    ),
+  )
+  const user = userEvent.setup()
+  render(<App />)
+  await screen.findByRole('region', { name: 'ToDo' })
+
+  await user.click(screen.getByRole('button', { name: 'ToDoにカードを追加' }))
+  await user.type(screen.getByPlaceholderText('タイトルを入力してください'), 'だめなカード{Enter}')
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('入力内容を確認してください')
+  expect(screen.getByPlaceholderText('タイトルを入力してください')).toHaveValue('だめなカード')
 })

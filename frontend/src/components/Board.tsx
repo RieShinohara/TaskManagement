@@ -5,9 +5,10 @@ import { BoardColumn } from './BoardColumn'
 type Props = {
   columns: Column[]
   cards: Card[]
+  onCardCreated: () => void
 }
 
-export function Board({ columns, cards }: Props) {
+export function Board({ columns, cards, onCardCreated }: Props) {
   const today = todayString()
   const sortedColumns = [...columns].sort((a, b) => a.sortOrder - b.sortOrder)
   return (
@@ -18,6 +19,7 @@ export function Board({ columns, cards }: Props) {
           column={column}
           cards={cards.filter((card) => card.columnId === column.id)}
           today={today}
+          onCardCreated={onCardCreated}
         />
       ))}
     </div>

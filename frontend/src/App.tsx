@@ -6,7 +6,7 @@ import { useBoard } from './hooks/useBoard'
 
 function App() {
   const [search, setSearch] = useState<CardSearch>(EMPTY_SEARCH)
-  const board = useBoard(search)
+  const { board, reload } = useBoard(search)
 
   return (
     <div className="min-h-screen bg-[#fafbfd] text-gray-800">
@@ -21,7 +21,7 @@ function App() {
             {board.message}
           </p>
         )}
-        {board.status === 'success' && <Board columns={board.columns} cards={board.cards} />}
+        {board.status === 'success' && <Board columns={board.columns} cards={board.cards} onCardCreated={reload} />}
       </main>
     </div>
   )

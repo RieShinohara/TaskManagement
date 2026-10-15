@@ -1,21 +1,26 @@
-import type { Card, CardSearch, Column } from './types'
+import type { Card, CardCreateInput, CardSearch, Column } from './types'
 
 const CONNECTION_ERROR = 'サーバーに接続できません。バックエンドとDBが起動しているか確認してください。'
 
-// 開発中は、Vite のプロキシが /api をバックエンド（8080番）に中継する
-async function getJson<T>(url: string): Promise<T> {
+// 通信の共通部分。開発中は、Vite のプロキシが /api をバックエンド（8080番）に中継する
+async function request<T>(url: string, init?: RequestInit): Promise<T> {
   let response: Response
   try {
-    response = await fetch(url)
+    response = init ? await fetch(url, init) : await fetch(url)
   } catch {
     throw new Error(CONNECTION_ERROR)
   }
   if (!response.ok) {
     // バックエンドが止まっているとき、プロキシは 502 などを返す
     if ([502, 503, 504].includes(response.status)) throw new Error(CONNECTION_ERROR)
+    if (response.status === 400) throw new Error('入力内容を確認してください（タイトルは必須で、255文字までです）')
     throw new Error(`サーバーからエラーが返りました（${response.status}）`)
   }
   return response.json() as Promise<T>
+}
+
+function getJson<T>(url: string): Promise<T> {
+  return request<T>(url)
 }
 
 export function fetchColumns(): Promise<Column[]> {
@@ -28,4 +33,12 @@ export function fetchCards(search: CardSearch): Promise<Card[]> {
   if (search.dueBefore) params.set('dueBefore', search.dueBefore)
   const query = params.toString()
   return getJson<Card[]>(query ? `/api/cards?${query}` : '/api/cards')
+}
+
+export function createCard(input: CardCreateInput): Promise<Card> {
+  return request<Card>('/api/cards', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  })
 }

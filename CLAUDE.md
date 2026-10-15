@@ -6,8 +6,8 @@
 ## 1. プロジェクトの概要
 - Trello風のタスク管理アプリ（AIエンジニア養成コースの課題）。顧客は架空のフリーランス「Aさん」
 - リポジトリ：`RieShinohara/TaskManagement`（**公開リポジトリ**）
-- 技術：バックエンドは Java 25 + Spring Boot 4.1.1 + Gradle、DBは PostgreSQL 18（Docker）、画面は React（TypeScript、Vite、Tailwind CSS、dnd-kit。まだ未着手）。詳細は [docs/tech-stack.md](docs/tech-stack.md)
-- 構成：`docs/`（要件定義）、`backend/`（本番のサーバー）、`prototype/`（使い捨ての試作）、`notes/`（学習ノート）
+- 技術：バックエンドは Java 25 + Spring Boot 4.1.1 + Gradle、DBは PostgreSQL 18（Docker）、画面は React（TypeScript、Vite、Tailwind CSS、dnd-kit。`frontend/` に環境を作成済み）。詳細は [docs/tech-stack.md](docs/tech-stack.md)
+- 構成：`docs/`（要件定義）、`backend/`（本番のサーバー）、`frontend/`（本番の画面）、`prototype/`（使い捨ての試作）、`notes/`（学習ノート）
 
 ## 2. ユーザーへの接し方
 - ユーザーは、IT未経験の初学者。**日本語**で、専門用語は、かみ砕いて説明する
@@ -100,10 +100,13 @@ Refs #23
 | DBを停止（データは残る） | `docker compose down` | リポジトリ直下 |
 | バックエンドを起動 | `.\gradlew.bat bootRun` | `backend/` |
 | テスト | `.\gradlew.bat test` | `backend/`（Docker Desktop が必要） |
+| 画面を起動（http://localhost:5173） | `npm run dev` | `frontend/`（データを見るには、DBとバックエンドも起動） |
+| 画面のテスト／静的チェック／ビルド | `npm test` ／ `npm run lint` ／ `npm run build` | `frontend/` |
 
 - バックエンドは、**DBが起動していないと、起動に失敗する**
 - 新しいシェルで `java` が見つからないときは、`JAVA_HOME` を `C:\Program Files\Eclipse Adoptium\jdk-25*` にする
-- 詳しくは、[backend/README.md](backend/README.md)
+- 新しいシェルで `node` が見つからないときは、シェルを開き直す（Node.js 24 LTS は導入済み）
+- 詳しくは、[backend/README.md](backend/README.md)、[frontend/README.md](frontend/README.md)
 
 ## 6. 文書の置き場所
 - 要件定義：`docs/`（入口は `docs/requirements.md`）

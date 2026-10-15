@@ -6,6 +6,9 @@ import { defineConfig } from 'vitest/config'
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
+    // 5173番が使えないときに、黙って別の番号で起動しない（失敗させる）
+    port: 5173,
+    strictPort: true,
     // 画面から /api にお願いすると、バックエンド（8080番）に中継する。
     // ブラウザには「同じ場所との通信」に見えるので、CORS の設定が要らない
     proxy: {

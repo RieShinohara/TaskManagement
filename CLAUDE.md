@@ -57,7 +57,7 @@
 - 空行のあと、本文：なぜ、そうしたか、どうしたか（必要なときだけ）
 - 最後に、`Refs #Issue番号` を書く
 - 末尾に、システムから指示された `Co-Authored-By` の行を付ける
-- `git add` は、ファイルを1つずつ指定する。**`.claude/`、`.env` は、コミットしない**
+- `git add` は、ファイルを1つずつ指定する。**`.claude/`、`.env` は、コミットしない**（ただし、`.claude/skills/` だけは例外。プロジェクト用のスキルとして、コミットする。`.claude/settings*.json` は、コミットしない）
 - コミットの前に、`git status` で、対象を確認する
 
 ```
@@ -105,6 +105,7 @@ Refs #23
 
 - バックエンドは、**DBが起動していないと、起動に失敗する**
 - 新しいシェルで `java` が見つからないときは、`JAVA_HOME` を `C:\Program Files\Eclipse Adoptium\jdk-25*` にする
+- **ポートは固定**：バックエンド 8080、画面 5173、DB 5432。サーバーを起動するときは、先に使用中でないか確認し、競合したら、スキル `dev-port-conflict`（`.claude/skills/dev-port-conflict/`）の手順に従う。別のポートで起動しない。無関係なプロセス（特にDocker）は、ユーザーの確認なしに止めない
 - 新しいシェルで `node` が見つからないときは、シェルを開き直す（Node.js 24 LTS は導入済み）
 - 詳しくは、[backend/README.md](backend/README.md)、[frontend/README.md](frontend/README.md)
 

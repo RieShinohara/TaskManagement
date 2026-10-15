@@ -7,7 +7,7 @@ export const CARD_BG: Record<CardColor, string> = {
   blue: 'bg-[#dfeafd]',
   green: 'bg-[#dff5e6]',
   yellow: 'bg-[#fdf4cf]',
-  gray: 'bg-[#e7e9ee]',
+  gray: 'bg-[#e2e5eb]',
 }
 
 export const CARD_COLOR_LABEL: Record<CardColor, string> = {

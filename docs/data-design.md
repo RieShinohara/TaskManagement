@@ -18,6 +18,7 @@ erDiagram
     CARD {
         int id PK "カードのID"
         string title "タイトル（必須）"
+        string description "説明文（任意。未設定は空。2000文字まで）"
         string color "色（none / red / blue / green / yellow / gray）"
         date due_date "期限日（任意。未設定は空）"
         int column_id FK "所属する列のID"
@@ -46,7 +47,8 @@ erDiagram
 ### 2.2 カード（CARD）
 | 項目 | 内容 | 必須 | 関連する要件 |
 |---|---|---|---|
-| title | カードのタイトル | 必須 | カードの追加・タイトルの修正 |
+| title | カードのタイトル（255文字まで） | 必須 | カードの追加・タイトルの修正 |
+| description | カードの説明文（2000文字まで）。未設定の場合は空 | 任意 | 説明文の入力・修正、説明文ありの目印の表示 |
 | color | カードの背景色。初期値は none（色なし） | 必須 | 色の変更 |
 | due_date | 期限日。未設定の場合は空 | 任意 | 期限日の設定、期限順の並び替え、期限切れの赤文字表示 |
 | column_id | カードが入っている列 | 必須 | 列の間の移動 |
@@ -89,6 +91,7 @@ erDiagram
 | | sort_order | integer、必須 |
 | card | id（主キー、自動採番） | bigint |
 | | title | varchar(255)、必須 |
+| | description | varchar(2000)、任意（**未実装**。講義13で追加する） |
 | | color | varchar(255)、必須（none / red / blue / green / yellow / gray。APIで検査する） |
 | | due_date | date、任意 |
 | | column_id（board_column.id への外部キー） | bigint、必須 |

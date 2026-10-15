@@ -9,6 +9,7 @@ AIエンジニア養成コースの学習記録です。Claude Codeと一緒に�
 | [03-prototype-guide.md](03-prototype-guide.md) | プロトタイプ（HTML / CSS / JavaScript）の仕組み |
 | [04-glossary.md](04-glossary.md) | 用語集 |
 | [05-backend-guide.md](05-backend-guide.md) | バックエンド（Java + Spring Boot、PostgreSQL、Docker）の仕組みと、動かし方 |
+| [06-frontend-guide.md](06-frontend-guide.md) | フロントエンド（React + TypeScript + Vite）の仕組みと、画面がデータを表示するまでの流れ |
 
 ## このノートの使い方
 - 分からない言葉が出たら、まず [用語集](04-glossary.md) を見る

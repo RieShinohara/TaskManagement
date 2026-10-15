@@ -58,4 +58,4 @@
 - PostgreSQL 18：Docker で起動できる状態（`docker-compose.yml`）。SQLの確認（INSERT / SELECT / DELETE）と、バックエンドからの接続は確認済み（2026-10-13）
 - Docker Desktop：導入済み
 - Node.js 24 LTS（winget でインストール）：導入済み（2026-10-15）
-- フロントエンド：`frontend/` に環境を作成済み（Vite + React + TypeScript + Tailwind CSS + Vitest。使い方は [frontend/README.md](../frontend/README.md)）
+- フロントエンド：`frontend/` に環境を作成済み（Vite + React + TypeScript + Tailwind CSS + Vitest。使い方は [frontend/README.md](../frontend/README.md)）。検索結果を3列のボード画面に表示するところまで動作確認済み（2026-10-15）

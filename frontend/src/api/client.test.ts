@@ -1,5 +1,5 @@
 import { afterEach, expect, test, vi } from 'vitest'
-import { createCard, deleteCard, fetchCards, moveCard, updateCard } from './client'
+import { createCard, deleteCard, fetchCards, moveCard, sortColumnByDue, updateCard } from './client'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -104,4 +104,16 @@ test('カード移動は、動かした先の列と位置を、JSONで PUT す�
 test('カード移動で接続できないときは、接続エラーにする', async () => {
   stubFetch(new TypeError('Failed to fetch'))
   await expect(moveCard(9, { columnId: 2, index: 0 })).rejects.toThrow('サーバーに接続できません')
+})
+
+test('期限順の並び替えは、列を指定して POST し、並び直したカードを受け取る', async () => {
+  const sorted = [{ id: 2, columnId: 1, position: 0 }, { id: 1, columnId: 1, position: 1 }]
+  const fn = stubFetch({ ok: true, json: async () => sorted })
+  await expect(sortColumnByDue(1)).resolves.toEqual(sorted)
+  expect(fn).toHaveBeenCalledWith('/api/columns/1/sort-by-due', { method: 'POST' })
+})
+
+test('期限順の並び替えで接続できないときは、接続エラーにする', async () => {
+  stubFetch(new TypeError('Failed to fetch'))
+  await expect(sortColumnByDue(1)).rejects.toThrow('サーバーに接続できません')
 })

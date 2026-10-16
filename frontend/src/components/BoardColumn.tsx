@@ -16,9 +16,20 @@ type Props = {
   onCardCreated: () => void
   onCardOpen: (card: Card) => void
   dragDisabled: boolean
+  onSortByDue: (columnId: number) => void // 「期限順」ボタンを押したとき
+  sorting: boolean // この列を並び直している最中（ボタンを押せなくする）
 }
 
-export function BoardColumn({ column, cards, today, onCardCreated, onCardOpen, dragDisabled }: Props) {
+export function BoardColumn({
+  column,
+  cards,
+  today,
+  onCardCreated,
+  onCardOpen,
+  dragDisabled,
+  onSortByDue,
+  sorting,
+}: Props) {
   const [adding, setAdding] = useState(false)
   const sorted = [...cards].sort((a, b) => a.position - b.position)
   // 列全体を、カードを落とせる場所にする（カードが1枚もない列にも、落とせるように）
@@ -31,14 +42,25 @@ export function BoardColumn({ column, cards, today, onCardCreated, onCardOpen, d
     >
       <div className="mb-3 flex items-center justify-between px-1">
         <h2 className="text-base font-bold text-gray-800">{column.name}</h2>
-        <button
-          type="button"
-          aria-label={`${column.name}にカードを追加`}
-          onClick={() => setAdding(true)}
-          className="rounded px-2 text-xl leading-none text-gray-600 hover:bg-white hover:text-blue-600"
-        >
-          ＋
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            aria-label={`${column.name}を期限順に並べ替え`}
+            onClick={() => onSortByDue(column.id)}
+            disabled={sorting}
+            className="rounded border border-[#d5dbe8] bg-white px-2 py-0.5 text-sm text-gray-600 hover:bg-[#f1f4fa] hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            期限順
+          </button>
+          <button
+            type="button"
+            aria-label={`${column.name}にカードを追加`}
+            onClick={() => setAdding(true)}
+            className="rounded px-2 text-xl leading-none text-gray-600 hover:bg-white hover:text-blue-600"
+          >
+            ＋
+          </button>
+        </div>
       </div>
       {adding && (
         <div className="mb-2">

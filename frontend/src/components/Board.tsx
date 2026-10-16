@@ -15,6 +15,7 @@ import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import { useRef, useState } from 'react'
 import { moveCard as moveCardApi, sortColumnByDue } from '../api/client'
 import type { Card, Column } from '../api/types'
+import type { Tone } from '../lib/background'
 import { CARD_BG } from '../lib/cardColors'
 import { isOverdue, todayString } from '../lib/date'
 import { parseCardDragId, parseColumnDropId } from '../lib/dragIds'
@@ -32,13 +33,14 @@ type Props = {
   onCardUpdated: () => void
   onCardMoved: () => void // 動かして、保存できたとき（ボードの取り直しに使う）
   dragDisabled: boolean // true のあいだは、カードを動かせない（検索で絞り込み中）
+  tone: Tone // 背景に合わせた、列の色合い
 }
 
 // 動かしている最中・保存を待っている間の並び。base は、どの cards をもとにしたか。
 // 親から新しい cards（取り直した結果）が届いたら、base と違うので、自然に使われなくなる
 type Pending = { base: Card[]; cards: Card[] }
 
-export function Board({ columns, cards, onCardCreated, onCardUpdated, onCardMoved, dragDisabled }: Props) {
+export function Board({ columns, cards, onCardCreated, onCardUpdated, onCardMoved, dragDisabled, tone }: Props) {
   const today = todayString()
   const sortedColumns = [...columns].sort((a, b) => a.sortOrder - b.sortOrder)
   const [editing, setEditing] = useState<Card | null>(null) // 編集のモーダルで開いているカード
@@ -193,6 +195,7 @@ export function Board({ columns, cards, onCardCreated, onCardUpdated, onCardMove
             dragDisabled={dragDisabled}
             onSortByDue={(id) => void handleSortByDue(id)}
             sorting={sortingColumnId !== null}
+            tone={tone}
           />
         ))}
         {editing && (

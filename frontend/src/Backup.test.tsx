@@ -201,3 +201,14 @@ test('読み込んでいる間は、ボタンが押せず、Esc でも閉じな�
   finish({ ok: true, status: 204 } as Response)
   await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument())
 })
+
+test('読み込めたら、背景の設定も取り直す', async () => {
+  const { fn, user } = await setup()
+  const settingsGets = () => fn.mock.calls.filter(([url]) => url === '/api/settings').length
+  await waitFor(() => expect(settingsGets()).toBe(1)) // 開いたときの1回
+
+  await chooseFile(user, jsonFile(JSON.stringify(backupBody)))
+  await user.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: '読み込む' }))
+
+  await waitFor(() => expect(settingsGets()).toBe(2))
+})

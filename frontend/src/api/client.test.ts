@@ -4,10 +4,12 @@ import {
   deleteCard,
   fetchBackup,
   fetchCards,
+  fetchSettings,
   moveCard,
   restoreBackup,
   sortColumnByDue,
   updateCard,
+  updateSettings,
 } from './client'
 
 afterEach(() => vi.unstubAllGlobals())
@@ -155,4 +157,26 @@ test('バックアップの読み込みで 400 が返ったときは、読み込
 test('バックアップの読み込みで接続できないときは、接続エラーにする', async () => {
   stubFetch(new TypeError('Failed to fetch'))
   await expect(restoreBackup(backupFile)).rejects.toThrow('サーバーに接続できません')
+})
+
+test('設定の取得は、GET して、選んだ背景を受け取る', async () => {
+  const fn = stubFetch({ ok: true, json: async () => ({ background: 'night' }) })
+  await expect(fetchSettings()).resolves.toEqual({ background: 'night' })
+  expect(fn).toHaveBeenCalledWith('/api/settings')
+})
+
+test('設定の更新は、JSONで PUT する', async () => {
+  const fn = stubFetch({ ok: true, json: async () => ({ background: 'sunset' }) })
+  await expect(updateSettings({ background: 'sunset' })).resolves.toEqual({ background: 'sunset' })
+  expect(fn).toHaveBeenCalledWith('/api/settings', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ background: 'sunset' }),
+  })
+})
+
+test('設定を取得・更新できないときは、接続エラーにする', async () => {
+  stubFetch(new TypeError('Failed to fetch'))
+  await expect(fetchSettings()).rejects.toThrow('サーバーに接続できません')
+  await expect(updateSettings({ background: 'sky' })).rejects.toThrow('サーバーに接続できません')
 })

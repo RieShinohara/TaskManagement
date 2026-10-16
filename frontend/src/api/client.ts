@@ -7,6 +7,8 @@ import type {
   CardUpdateInput,
   Column,
   Settings,
+  UserImage,
+  UserImageSlot,
 } from './types'
 
 const CONNECTION_ERROR = 'サーバーに接続できません。バックエンドとDBが起動しているか確認してください。'
@@ -111,4 +113,28 @@ export function updateSettings(settings: Settings): Promise<Settings> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(settings),
   })
+}
+
+// 登録済みの自分の背景画像の一覧
+export function fetchBackgroundImages(): Promise<UserImage[]> {
+  return getJson<UserImage[]>('/api/background-images')
+}
+
+// 画像（JPEG）を登録する。すでにあれば、置き換わる。本文は、JPEGのバイト列そのもの
+export function uploadBackgroundImage(slot: UserImageSlot, jpeg: Blob): Promise<UserImage> {
+  return request<UserImage>(
+    `/api/background-images/${slot}`,
+    { method: 'PUT', headers: { 'Content-Type': 'image/jpeg' }, body: jpeg },
+    '画像を登録できませんでした。別の画像を選んでください。',
+  )
+}
+
+// 登録した画像を消す（標準の画像に戻る）
+export function deleteBackgroundImage(slot: UserImageSlot): Promise<void> {
+  return request<void>(`/api/background-images/${slot}`, { method: 'DELETE' })
+}
+
+// 登録した画像を表示するときの URL。登録日時を付けて、置き換えたときに、ブラウザが古い画像を使わないようにする
+export function backgroundImageUrl(image: UserImage): string {
+  return `/api/background-images/${image.slot}?v=${encodeURIComponent(image.updatedAt)}`
 }

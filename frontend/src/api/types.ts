@@ -66,3 +66,12 @@ export type Background = 'plain' | 'sky' | 'sunset' | 'night' | 'auto'
 export type Settings = {
   background: Background
 }
+
+// 自分の画像を割り当てられる背景（無地と自動には、割り当てない）
+export type UserImageSlot = 'sky' | 'sunset' | 'night'
+
+// 登録済みの自分の画像（バックエンドの BackgroundImageResponse と同じ形）。画像のデータそのものは入らない
+export type UserImage = {
+  slot: UserImageSlot
+  updatedAt: string // 登録（置き換え）した日時。画像を取り直すかどうかの目印にする
+}

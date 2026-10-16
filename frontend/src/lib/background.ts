@@ -1,4 +1,4 @@
-import type { Background } from '../api/types'
+import type { Background, UserImageSlot } from '../api/types'
 
 // 背景まわりの、画面を使わない関数
 
@@ -40,4 +40,9 @@ export function resolveScene(background: Background, now: Date): Scene {
 export function toneOf(scene: Scene): Tone {
   if (scene === 'plain') return 'plain'
   return scene === 'night' ? 'dark' : 'light'
+}
+
+// 自分の画像を割り当てられる背景・場面かどうか（青空・夕焼け・星空。無地と自動は、割り当てない）
+export function isUserImageSlot(value: string): value is UserImageSlot {
+  return value === 'sky' || value === 'sunset' || value === 'night'
 }

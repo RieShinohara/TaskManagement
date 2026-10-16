@@ -18,9 +18,16 @@ const cards: Card[] = [
 ]
 
 // PUT を受けると、そのカードを書き換えて、次の GET から返すモック（failPut が true なら、PUT は 400 を返す）
-function mockApi(failPut = false) {
+// DELETE を受けると、そのカードを消して 204 を返す（failDelete が true なら、DELETE は 404 を返す）
+function mockApi(failPut = false, failDelete = false) {
   const stored = cards.map((c) => ({ ...c }))
   const fn = vi.fn((url: string, init?: RequestInit) => {
+    if (init?.method === 'DELETE') {
+      if (failDelete) return Promise.resolve({ ok: false, status: 404 } as Response)
+      const index = stored.findIndex((c) => c.id === Number(url.split('/').pop()))
+      stored.splice(index, 1)
+      return Promise.resolve({ ok: true, status: 204 } as Response)
+    }
     if (init?.method === 'PUT') {
       if (failPut) return Promise.resolve({ ok: false, status: 400 } as Response)
       const id = Number(url.split('/').pop())
@@ -39,8 +46,10 @@ function mockApi(failPut = false) {
 
 const putCalls = (fn: ReturnType<typeof mockApi>) => fn.mock.calls.filter(([, init]) => init?.method === 'PUT')
 
-async function openMilkCard(failPut = false) {
-  const fn = mockApi(failPut)
+const deleteCalls = (fn: ReturnType<typeof mockApi>) => fn.mock.calls.filter(([, init]) => init?.method === 'DELETE')
+
+async function openMilkCard(failPut = false, failDelete = false) {
+  const fn = mockApi(failPut, failDelete)
   const user = userEvent.setup()
   render(<App />)
   await screen.findByRole('region', { name: 'ToDo' })
@@ -163,4 +172,84 @@ test('保存に失敗したら、エラーを表示して、モーダルは開�
   expect(await within(dialog).findByRole('alert')).toHaveTextContent('入力内容を確認してください')
   expect(within(dialog).getByLabelText('タイトル')).toHaveValue('牛乳を買う 変更')
   expect(within(dialog).getByRole('button', { name: '保存' })).toBeEnabled()
+})
+
+test('「削除」を押すと、確認が出る。まだ削除はされない', async () => {
+  const { fn, user } = await openMilkCard()
+
+  await user.click(screen.getByRole('button', { name: '削除' }))
+
+  const confirm = screen.getByRole('alertdialog', { name: '削除の確認' })
+  expect(within(confirm).getByText('本当に削除しますか？')).toBeInTheDocument()
+  expect(within(confirm).getByRole('button', { name: '削除する' })).toBeInTheDocument()
+  expect(deleteCalls(fn)).toHaveLength(0)
+})
+
+test('確認で「キャンセル」を押すと、削除されず、編集に戻る', async () => {
+  const { fn, user } = await openMilkCard()
+
+  await user.click(screen.getByRole('button', { name: '削除' }))
+  await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'キャンセル' }))
+
+  expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+  expect(screen.getByRole('dialog', { name: 'カードを編集' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '保存' })).toBeInTheDocument()
+  expect(deleteCalls(fn)).toHaveLength(0)
+})
+
+test('確認を出している間の Esc は、確認だけを閉じる', async () => {
+  const { fn, user } = await openMilkCard()
+
+  await user.click(screen.getByRole('button', { name: '削除' }))
+  await user.keyboard('{Escape}')
+
+  expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+  expect(screen.getByRole('dialog', { name: 'カードを編集' })).toBeInTheDocument()
+  expect(deleteCalls(fn)).toHaveLength(0)
+})
+
+test('「削除する」を押すと、DELETE が送られ、カードがボードから消える', async () => {
+  const { fn, user } = await openMilkCard()
+
+  await user.click(screen.getByRole('button', { name: '削除' }))
+  await user.click(screen.getByRole('button', { name: '削除する' }))
+
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  expect(deleteCalls(fn)).toHaveLength(1)
+  expect(deleteCalls(fn)[0][0]).toBe('/api/cards/1')
+  await waitFor(() => expect(screen.queryByRole('button', { name: /牛乳を買う/ })).not.toBeInTheDocument())
+  expect(screen.getByRole('button', { name: /部屋の掃除/ })).toBeInTheDocument()
+})
+
+test('削除に失敗したら、エラーを表示して、確認は出したまま', async () => {
+  const { user } = await openMilkCard(false, true)
+
+  await user.click(screen.getByRole('button', { name: '削除' }))
+  await user.click(screen.getByRole('button', { name: '削除する' }))
+
+  const dialog = screen.getByRole('dialog')
+  expect(await within(dialog).findByRole('alert')).toHaveTextContent('カードが見つかりません')
+  expect(within(dialog).getByRole('button', { name: '削除する' })).toBeEnabled()
+})
+
+test('削除している間は、ボタンが押せず、Esc でも閉じない', async () => {
+  const { fn, user } = await openMilkCard()
+  // DELETE の返事を、手動で遅らせる
+  let finish!: (r: Response) => void
+  const original = fn.getMockImplementation()!
+  fn.mockImplementation((url, init) =>
+    init?.method === 'DELETE' ? new Promise<Response>((resolve) => (finish = resolve)) : original(url, init),
+  )
+
+  await user.click(screen.getByRole('button', { name: '削除' }))
+  await user.click(screen.getByRole('button', { name: '削除する' }))
+
+  expect(screen.getByRole('button', { name: '削除する' })).toBeDisabled()
+  expect(screen.getByRole('button', { name: 'キャンセル' })).toBeDisabled()
+  await user.keyboard('{Escape}')
+  expect(screen.getByRole('dialog')).toBeInTheDocument()
+  expect(deleteCalls(fn)).toHaveLength(1)
+
+  finish({ ok: true, status: 204 } as Response)
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
 })

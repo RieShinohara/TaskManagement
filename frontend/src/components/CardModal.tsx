@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
-import { updateCard } from '../api/client'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { deleteCard, updateCard } from '../api/client'
 import type { Card, CardColor } from '../api/types'
 import { todayString } from '../lib/date'
 import { ColorPicker } from './ColorPicker'
@@ -25,22 +25,29 @@ export function CardModal({ card, onSaved, onClose }: Props) {
   const [description, setDescription] = useState(card.description ?? '')
   const [color, setColor] = useState<CardColor>(card.color)
   const [dueDate, setDueDate] = useState(card.dueDate ?? '')
-  const [saving, setSaving] = useState(false)
+  const [saving, setSaving] = useState(false) // 保存中・削除中（通信中）
+  const [confirmingDelete, setConfirmingDelete] = useState(false) // 「本当に削除しますか？」を出している
   const [error, setError] = useState<string | null>(null)
   const savingRef = useRef(false) // 二重送信を防ぐ
   const today = todayString()
 
-  // Esc キーで、変更を捨てて閉じる（保存中は閉じない）
+  // Esc キーや窓の外で、閉じる。削除の確認を出している間は、確認だけを閉じる。通信中は、閉じない
+  const dismiss = useCallback(() => {
+    if (savingRef.current) return
+    if (confirmingDelete) setConfirmingDelete(false)
+    else onClose()
+  }, [confirmingDelete, onClose])
+
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape' && !savingRef.current) onClose()
+      if (e.key === 'Escape') dismiss()
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [onClose])
+  }, [dismiss])
 
   const trimmedTitle = title.trim()
-  const canSave = trimmedTitle !== '' && !saving
+  const canSave = trimmedTitle !== '' && !saving && !confirmingDelete
 
   async function handleSave() {
     if (!canSave || savingRef.current) return
@@ -73,12 +80,28 @@ export function CardModal({ card, onSaved, onClose }: Props) {
     }
   }
 
+  async function handleDelete() {
+    if (savingRef.current) return
+    savingRef.current = true
+    setSaving(true)
+    setError(null)
+    try {
+      await deleteCard(card.id)
+      onSaved()
+      onClose()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '削除に失敗しました')
+      savingRef.current = false
+      setSaving(false)
+    }
+  }
+
   return (
     // 窓の外（暗い部分）を押したら、変更を捨てて閉じる
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
       onMouseDown={(e) => {
-        if (e.target === e.currentTarget && !savingRef.current) onClose()
+        if (e.target === e.currentTarget) dismiss()
       }}
     >
       <div
@@ -142,24 +165,61 @@ export function CardModal({ card, onSaved, onClose }: Props) {
           </p>
         )}
 
-        <div className="mt-5 flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={saving}
-            className="rounded border border-[#d5dbe8] px-4 py-1.5 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-          >
-            キャンセル
-          </button>
-          <button
-            type="button"
-            onClick={() => void handleSave()}
-            disabled={!canSave}
-            className="rounded bg-blue-600 px-4 py-1.5 text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
-          >
-            保存
-          </button>
-        </div>
+        {confirmingDelete ? (
+          // 削除の確認（モーダルの中で、ボタンの部分を入れ替える）
+          <div role="alertdialog" aria-label="削除の確認" className="mt-5 rounded border border-red-200 bg-red-50 p-3">
+            <p className="font-semibold text-red-800">本当に削除しますか？</p>
+            <p className="mt-1 text-sm text-red-700">削除したカードは、元に戻せません。</p>
+            <div className="mt-3 flex justify-end gap-2">
+              <button
+                type="button"
+                autoFocus
+                onClick={() => setConfirmingDelete(false)}
+                disabled={saving}
+                className="rounded border border-[#d5dbe8] bg-white px-4 py-1.5 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                キャンセル
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleDelete()}
+                disabled={saving}
+                className="rounded bg-red-600 px-4 py-1.5 text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-red-300"
+              >
+                削除する
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-5 flex items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={() => setConfirmingDelete(true)}
+              disabled={saving}
+              className="rounded border border-red-300 px-4 py-1.5 text-red-700 hover:bg-red-50 disabled:opacity-50"
+            >
+              削除
+            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={saving}
+                className="rounded border border-[#d5dbe8] px-4 py-1.5 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                キャンセル
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleSave()}
+                disabled={!canSave}
+                className="rounded bg-blue-600 px-4 py-1.5 text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+              >
+                保存
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

@@ -1,5 +1,5 @@
 import { afterEach, expect, test, vi } from 'vitest'
-import { createCard, fetchCards, updateCard } from './client'
+import { createCard, deleteCard, fetchCards, updateCard } from './client'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -75,4 +75,17 @@ test('カード更新で 404 が返ったときは、見つからないことを
   await expect(updateCard(5, { title: 'x', description: null, color: 'none', dueDate: null })).rejects.toThrow(
     'カードが見つかりません',
   )
+})
+
+test('カード削除は、DELETE で送り、204（中身なし）でもエラーにならない', async () => {
+  const json = vi.fn()
+  const fn = stubFetch({ ok: true, status: 204, json })
+  await expect(deleteCard(9)).resolves.toBeUndefined()
+  expect(fn).toHaveBeenCalledWith('/api/cards/9', { method: 'DELETE' })
+  expect(json).not.toHaveBeenCalled()
+})
+
+test('カード削除で 404 が返ったときは、読み込み直しを促すエラーにする', async () => {
+  stubFetch({ ok: false, status: 404 })
+  await expect(deleteCard(9)).rejects.toThrow('カードが見つかりません')
 })

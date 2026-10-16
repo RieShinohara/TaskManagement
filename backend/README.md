@@ -48,6 +48,8 @@
 | `PUT /api/cards/{id}` | カードの内容（タイトル・説明文・色・期限日）を更新する（下記） |
 | `PUT /api/cards/{id}/move` | カードを動かす。別の列へも、同じ列の中でも（下記） |
 | `POST /api/columns/{id}/sort-by-due` | その列のカードを、期限の早い順に並べ直して保存する（下記） |
+| `GET /api/backup` | 全データ（列とカード）を、バックアップファイルの形で返す（下記） |
+| `POST /api/backup/restore` | バックアップファイルの内容で、今のデータを**全部入れ替える**（下記） |
 | `DELETE /api/cards/{id}` | カードを削除する。成功は `204`（中身なし）、存在しなければ `404` |
 
 絞り込み（どれも省略できる。組み合わせられる）:
@@ -99,6 +101,19 @@ Invoke-RestMethod http://localhost:8080/api/columns/1/sort-by-due -Method Post
 - 結果は `position` の 0,1,2,… の連番として保存され、並び直したあとの、その列のカードが、上から順に返る
 - 並び直したあとも、カードを動かせる（移動API）。新しく追加したカードは、列の一番上に入る
 - 存在しない列なら `404`
+
+バックアップ（書き出しと読み込み）:
+```powershell
+# 書き出し：ファイルに保存する
+Invoke-WebRequest http://localhost:8080/api/backup -OutFile backup.json
+# 読み込み：今のデータは、全部入れ替わる（戻せない）
+Invoke-RestMethod http://localhost:8080/api/backup/restore -Method Post -ContentType "application/json; charset=utf-8" -InFile backup.json
+```
+- ファイルの形式は、[docs/data-design.md](../docs/data-design.md) の「バックアップファイルの形式」。列は左から順、カードは上から順に、入れ子で持つ（IDと `position` は入れない）
+- 読み込むと、今ある**カードと列は全部消えて**、ファイルの内容になる。IDは振り直され、`position` は 0 からの連番になる。**途中で失敗したら、全部取り消され、今のデータは変わらない**
+- 不正なファイル（`app` が `taskboard` でない、`version` が 1 でない、列がない、タイトルが空、色が不正、期限日が不正、カードが1万枚を超える、JSONでない、など）は `400`。成功は `204`（中身なし）
+- 知らない項目（たとえば、将来の背景の設定）は、無視して読める
+- バックアップのファイルは、リポジトリに入れない（公開リポジトリなので、個人の予定が入るおそれがある）
 
 テーブルは、バックエンドの起動時に Entity（Javaのクラス）から自動で作られる（`ddl-auto: update`）。列の最初の3件も、起動時に入る。
 

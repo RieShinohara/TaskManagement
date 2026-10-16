@@ -123,6 +123,8 @@ GET http://localhost:8080/api/columns
 | `PUT /api/cards/{id}` | カードの更新（タイトル・説明文・色・期限日） |
 | `PUT /api/cards/{id}/move` | カードの移動（別の列へ、同じ列の中で） |
 | `POST /api/columns/{id}/sort-by-due` | 列のカードを期限順に並べ直して保存 |
+| `GET /api/backup` | 全データの書き出し（バックアップ） |
+| `POST /api/backup/restore` | バックアップの読み込み（全部入れ替え） |
 | `DELETE /api/cards/{id}` | カードの削除。成功は `204`、存在しなければ `404` |
 
 ### 絞り込み検索：クエリパラメータ
@@ -330,3 +332,34 @@ Service      sortColumnByDue：列を探す（なければ404）→ 列のカー
 2. `Invoke-RestMethod http://localhost:8080/api/columns/1/sort-by-due -Method Post` を実行して、返ってきた順番を見る
 3. `SELECT id, title, due_date, position FROM card WHERE column_id = 1 ORDER BY position;` で、DBの並びも変わったか確かめる
 4. 同じ期限のカードを2枚作り、並び直しても、2枚の順番が変わらないか確かめる
+
+## 16. バックアップ（`GET /api/backup`、`POST /api/backup/restore`）
+全部のデータ（列とカード）を、1つのJSONファイルとして書き出し、そのファイルから元の状態に戻せるようにする。データはDBに自動で保存されているので、これは「別の場所にファイルとして残す」ための機能。
+
+```
+書き出し  GET  /api/backup          → Service：列とカードを、入れ子の形にして返す
+読み込み  POST /api/backup/restore  → Controller：@Valid で検査 → Service：全部消して、入れ直す（@Transactional）
+```
+
+| ファイル | 役割 |
+|---|---|
+| `dto/BackupFile` / `BackupColumn` / `BackupCard` | ファイルの形（record）。検査の決まり（`@NotBlank`、`@Pattern` など）も、ここに書く |
+| `service/BackupService` | `export()`（書き出し）と `restore(file)`（読み込み） |
+| `controller/BackupController` | 窓口。書き出しは GET、読み込みは POST（成功は 204） |
+
+- **ファイルの形：入れ子にして、IDと position は入れない**。列の中にカードを入れて、並び順は**配列の順**で表す。IDや `position` の数値をファイルに入れると、「存在しない列を指すカード」のような食い違いが作れてしまう。入れ子なら、それが起きない。読み込むと、IDは新しく振られ、`position` は 0,1,2,… の連番になる（移動API、14章と同じ考え方）
+- **`app` と `version` は、見分けの目印**。`app` が `taskboard` でないファイルは、別のアプリのファイルなので、読み込まない。`version` は、将来、形式を変えたときに、古いファイルを見分けるため（今は 1 だけ）
+- **読み込みは、全部入れ替え。1つのトランザクションで**。①カードを全部消す ②列を全部消す ③ファイルの列とカードを入れる、を `@Transactional` の中で行う。**途中で失敗したら、全部取り消される**ので、「半分だけ消えた」状態にならない。カードが列を指している（外部キー）ので、**カードから先に消す**
+- **検査は、DBに触る前に終わらせる**。`@Valid` の検査（色が6つのどれか、タイトルが空でない、日付の形など）に通らなければ、Service に入る前に **400** で返る。だから、不正なファイルでは、今のデータは何も変わらない。カードの数の上限（1万枚）だけは、Service の中で調べる（それでも、消す前に調べている）
+- **知らない項目は、無視する**（Spring Boot の標準の動き）。将来、背景の設定を足しても、今のファイルが、そのまま読める
+- **`deleteAllInBatch()`**：1件ずつ消さず、`DELETE FROM card` を1回で実行する。500枚あっても速い
+- テスト `BackupApiTests`：書き出しの形／**書き出して → 壊して → 読み込むと、同じ内容に戻る（往復）**／今のカードが全部なくなる／並び順が配列の順で、position が連番、列の順が 1,2,3／負の position が連番に直る／説明文・色・期限日が戻り、空白だけの説明文はなくなる／背景などの知らない項目があっても読める／**不正なファイル19種類は 400 で、データが変わらない**／1万枚を超えると 400
+  - 読み込みは、DBの中身を全部入れ替える。DBは、ほかのテストと共有なので、**各テストの前に今の状態を書き出し、終わったら読み込んで、元に戻す**（`@BeforeEach` / `@AfterEach`）
+  - 注意：Javaのメソッド名には、空白が使えない。日本語のテスト名でも、`_` でつなぐ
+
+### やってみよう
+1. `Invoke-WebRequest http://localhost:8080/api/backup -OutFile backup.json` で、ファイルに保存して、中身を開く（列とカードが、入れ子になっている）
+2. 画面で、カードを何枚か消す
+3. `Invoke-RestMethod http://localhost:8080/api/backup/restore -Method Post -ContentType "application/json; charset=utf-8" -InFile backup.json` で読み込む。画面に、消したカードが戻る
+4. `backup.json` の `"app"` を `"other"` に変えて読み込み、`400` になるか、データが変わらないかを確かめる
+5. （注意）`backup.json` は、個人の予定が入るので、リポジトリに入れない

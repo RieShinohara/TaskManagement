@@ -42,3 +42,10 @@ export type CardCreateInput = {
   color: CardColor
   dueDate: string | null // 'YYYY-MM-DD'
 }
+
+// カード移動のお願いで送る内容（バックエンドの CardMoveRequest と同じ形）。
+// 動かした先の列と、その列の中での位置（0が一番上）。position の数値は、サーバーが決める
+export type CardMoveInput = {
+  columnId: number
+  index: number
+}

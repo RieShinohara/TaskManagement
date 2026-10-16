@@ -7,6 +7,8 @@ import { useBoard } from './hooks/useBoard'
 function App() {
   const [search, setSearch] = useState<CardSearch>(EMPTY_SEARCH)
   const { board, reload } = useBoard(search)
+  // 絞り込み中は、画面に出ているのが列の一部のカードだけ。「何番目」が決められないので、カードを動かせなくする
+  const searching = search.keyword.trim() !== '' || search.dueBefore !== ''
 
   return (
     <div className="min-h-screen bg-[#fafbfd] text-gray-800">
@@ -14,6 +16,11 @@ function App() {
         <h1 className="text-[22px] font-bold">タスク管理</h1>
         <SearchBar onSearch={setSearch} />
       </header>
+      {searching && (
+        <p role="status" className="border-b border-amber-200 bg-amber-50 px-6 py-2 text-sm text-amber-800">
+          絞り込み中のため、カードは動かせません。「クリア」を押すと、動かせるようになります。
+        </p>
+      )}
       <main>
         {board.status === 'loading' && <p className="p-6 text-gray-500">読み込み中…</p>}
         {board.status === 'error' && (
@@ -21,7 +28,16 @@ function App() {
             {board.message}
           </p>
         )}
-        {board.status === 'success' && <Board columns={board.columns} cards={board.cards} onCardCreated={reload} onCardUpdated={reload} />}
+        {board.status === 'success' && (
+          <Board
+            columns={board.columns}
+            cards={board.cards}
+            onCardCreated={reload}
+            onCardUpdated={reload}
+            onCardMoved={reload}
+            dragDisabled={searching}
+          />
+        )}
       </main>
     </div>
   )

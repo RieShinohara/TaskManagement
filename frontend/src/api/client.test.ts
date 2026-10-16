@@ -1,5 +1,5 @@
 import { afterEach, expect, test, vi } from 'vitest'
-import { createCard, deleteCard, fetchCards, updateCard } from './client'
+import { createCard, deleteCard, fetchCards, moveCard, updateCard } from './client'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -88,4 +88,20 @@ test('カード削除は、DELETE で送り、204（中身なし）でもエラ�
 test('カード削除で 404 が返ったときは、読み込み直しを促すエラーにする', async () => {
   stubFetch({ ok: false, status: 404 })
   await expect(deleteCard(9)).rejects.toThrow('カードが見つかりません')
+})
+
+test('カード移動は、動かした先の列と位置を、JSONで PUT する', async () => {
+  const moved = { id: 9, title: 'カード', columnId: 2, position: 0 }
+  const fn = stubFetch({ ok: true, json: async () => moved })
+  await expect(moveCard(9, { columnId: 2, index: 0 })).resolves.toEqual(moved)
+  expect(fn).toHaveBeenCalledWith('/api/cards/9/move', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ columnId: 2, index: 0 }),
+  })
+})
+
+test('カード移動で接続できないときは、接続エラーにする', async () => {
+  stubFetch(new TypeError('Failed to fetch'))
+  await expect(moveCard(9, { columnId: 2, index: 0 })).rejects.toThrow('サーバーに接続できません')
 })

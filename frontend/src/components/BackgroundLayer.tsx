@@ -1,7 +1,7 @@
 import type { Scene } from '../lib/background'
 
-// 薄い暗幕（黒20%）。自分の画像に重ねて、カードや見出しの文字を読みやすくする
-const OVERLAY = 'linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2))'
+// 薄い暗幕（黒10%）。自分の画像に重ねて、カードや見出しの文字を読みやすくする
+const OVERLAY = 'linear-gradient(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1))'
 
 type Props = {
   scene: Scene

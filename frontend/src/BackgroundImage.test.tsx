@@ -89,11 +89,11 @@ test('登録済みの画像があれば、標準の画像より優先して、�
   expect(layer()).not.toHaveClass('bg-scene-sky') // 標準の画像のクラスは、付かない
 })
 
-test('自分の画像には、黒20%の暗幕が重なる', async () => {
+test('自分の画像には、黒10%の暗幕が重なる', async () => {
   await setup({ background: 'sky', images: [SKY_IMAGE] })
 
   await waitFor(() => expect(layer()).toHaveAttribute('data-user-image'))
-  expect((layer() as HTMLElement).style.backgroundImage).toContain('rgba(0, 0, 0, 0.2)')
+  expect((layer() as HTMLElement).style.backgroundImage).toContain('rgba(0, 0, 0, 0.1)')
   expect((layer() as HTMLElement).style.backgroundImage).toContain(SKY_URL)
 })
 

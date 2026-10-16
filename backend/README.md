@@ -1,14 +1,15 @@
 # バックエンド（Java ＋ Spring Boot）
 
-タスク管理アプリのサーバー側。現在は雛型の段階で、動作確認用のAPIが1つあるだけ。
+タスク管理アプリのサーバー側。カード・列・設定（背景）・自分の背景画像・バックアップのAPIを持ち、データはPostgreSQLに保存する。
+仕組みと、作りながら学んだことは、[学習ノート 05](../notes/05-backend-guide.md) にまとめてある。
 
 | 項目 | 内容 |
 |---|---|
 | 言語 | Java 25（LTS） |
 | フレームワーク | Spring Boot 4.1.1（Spring Web） |
 | ビルドツール | Gradle 9.8.1（`gradlew` が自動で取得する） |
-
 | データベース接続 | Spring Data JPA ＋ PostgreSQL（Docker で起動） |
+| テスト | JUnit ＋ MockMvc ＋ Testcontainers（使い捨ての PostgreSQL） |
 
 ## 必要なもの
 - JDK 25（Gradle は別にインストールしなくてよい）
@@ -38,25 +39,44 @@
 ## API
 サーバー起動中に、ブラウザやコマンドで試せる。
 
+**動作確認**
+
 | 窓口 | 内容 |
 |---|---|
 | `GET /api/health` | 動作確認。`{"status":"ok"}` が返る |
+
+**列とカード**
+
+| 窓口 | 内容 |
+|---|---|
 | `GET /api/columns` | 列（ToDo / 作業中 / 完了）の一覧。表示順 |
 | `GET /api/cards` | カードの一覧。列の順、列の中の並び順。絞り込みができる（下記） |
 | `GET /api/cards/{id}` | カードを1件取得する。ないIDは `404` |
 | `POST /api/cards` | カードを追加する（下記） |
 | `PUT /api/cards/{id}` | カードの内容（タイトル・説明文・色・期限日）を更新する（下記） |
+| `DELETE /api/cards/{id}` | カードを削除する。成功は `204`（中身なし）、存在しなければ `404` |
 | `PUT /api/cards/{id}/move` | カードを動かす。別の列へも、同じ列の中でも（下記） |
 | `POST /api/columns/{id}/sort-by-due` | その列のカードを、期限の早い順に並べ直して保存する（下記） |
+
+**バックアップ**
+
+| 窓口 | 内容 |
+|---|---|
+| `GET /api/backup` | 全データ（列とカードと背景の設定）を、バックアップファイルの形で返す（下記） |
+| `POST /api/backup/restore` | バックアップファイルの内容で、今のデータを**全部入れ替える**（下記） |
+
+**背景**
+
+| 窓口 | 内容 |
+|---|---|
 | `GET /api/settings` | 設定（選んだ背景）を取得する。初めては青空（`sky`）（下記） |
 | `PUT /api/settings` | 設定（選んだ背景）を更新する（下記） |
 | `GET /api/background-images` | 登録した自分の背景画像の一覧（下記） |
 | `GET /api/background-images/{slot}` | 画像そのもの（JPEG）。登録がなければ `404` |
 | `PUT /api/background-images/{slot}` | 画像を登録（置き換え）する（下記） |
 | `DELETE /api/background-images/{slot}` | 登録した画像を消す（標準の画像に戻る）。成功は `204` |
-| `GET /api/backup` | 全データ（列とカード）を、バックアップファイルの形で返す（下記） |
-| `POST /api/backup/restore` | バックアップファイルの内容で、今のデータを**全部入れ替える**（下記） |
-| `DELETE /api/cards/{id}` | カードを削除する。成功は `204`（中身なし）、存在しなければ `404` |
+
+返事の番号は、成功が `200`（作ったときは `201`、中身のないときは `204`）、お願いの内容がおかしいと `400`、見つからないと `404`。
 
 絞り込み（どれも省略できる。組み合わせられる）:
 
@@ -87,6 +107,12 @@ Invoke-RestMethod http://localhost:8080/api/cards/1 -Method Put -ContentType "ap
 - カードの列と並び順（`columnId`、`position`）は、変わらない。動かすのは、次の「カードの移動」のAPI
 - タイトルが空・長すぎる、説明文が長すぎる、色が不正・無いなら `400`。存在しないカードなら `404`。成功すると、更新後のカードが返る
 - カードの応答（`GET`・`POST`・`PUT` 共通）には、`description` が含まれる（未設定は `null`）
+
+カードの削除（PowerShell の例）:
+```powershell
+Invoke-RestMethod http://localhost:8080/api/cards/1 -Method Delete
+```
+- 成功すると `204`（中身なし）。存在しないカードは `404`。**削除したカードは、元に戻せない**（ゴミ箱はない）。画面は、削除の前に確認を出す
 
 カードの移動（PowerShell の例）:
 ```powershell
@@ -141,7 +167,8 @@ Invoke-RestMethod http://localhost:8080/api/backup/restore -Method Post -Content
 - ファイルの形式は、[docs/data-design.md](../docs/data-design.md) の「バックアップファイルの形式」。列は左から順、カードは上から順に、入れ子で持つ（IDと `position` は入れない）
 - 読み込むと、今ある**カードと列は全部消えて**、ファイルの内容になる。IDは振り直され、`position` は 0 からの連番になる。**途中で失敗したら、全部取り消され、今のデータは変わらない**
 - 不正なファイル（`app` が `taskboard` でない、`version` が 1 でない、列がない、タイトルが空、色が不正、期限日が不正、カードが1万枚を超える、JSONでない、など）は `400`。成功は `204`（中身なし）
-- 知らない項目（たとえば、将来の背景の設定）は、無視して読める
+- 背景の設定（`settings.background`）も入る。ファイルに `settings` がなければ（古いバックアップ）、背景は青空になる。自分の背景画像は、入らない
+- 知らない項目は、無視して読める
 - バックアップのファイルは、リポジトリに入れない（公開リポジトリなので、個人の予定が入るおそれがある）
 
 テーブルは、バックエンドの起動時に Entity（Javaのクラス）から自動で作られる（`ddl-auto: update`）。列の最初の3件も、起動時に入る。
@@ -161,7 +188,7 @@ docker compose exec db psql -U taskmanagement -d taskmanagement -f /tmp/sample-d
 | 層 | フォルダ | 役割 |
 |---|---|---|
 | Controller | `controller/` | APIの窓口。お願いを受け取り、結果をJSONで返す |
-| Service | `service/` | 業務の処理（新しいカードを一番上に入れる、など） |
+| Service | `service/` | 業務の処理（新しいカードを一番上に入れる、並び替え、バックアップの読み込み、など） |
 | Repository | `repository/` | DBの読み書き（Spring が自動で用意する） |
 | Entity | `entity/` | テーブルに対応するクラス |
 | DTO | `dto/` | APIでやりとりするJSONの形 |

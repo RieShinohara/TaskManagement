@@ -1,4 +1,4 @@
-import type { Card, CardCreateInput, CardSearch, CardUpdateInput, Column } from './types'
+import type { Card, CardCreateInput, CardMoveInput, CardSearch, CardUpdateInput, Column } from './types'
 
 const CONNECTION_ERROR = 'サーバーに接続できません。バックエンドとDBが起動しているか確認してください。'
 
@@ -53,6 +53,14 @@ export function deleteCard(id: number): Promise<void> {
 
 export function updateCard(id: number, input: CardUpdateInput): Promise<Card> {
   return request<Card>(`/api/cards/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+}
+
+export function moveCard(id: number, input: CardMoveInput): Promise<Card> {
+  return request<Card>(`/api/cards/${id}/move`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),

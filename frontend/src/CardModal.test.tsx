@@ -67,7 +67,7 @@ test('カードを押すとモーダルが開き、今の内容が入ってい�
   const dialog = screen.getByRole('dialog', { name: 'カードを編集' })
   expect(within(dialog).getByLabelText('タイトル')).toHaveValue('牛乳を買う')
   expect(within(dialog).getByLabelText('説明文')).toHaveValue('2パック')
-  expect(within(dialog).getByLabelText('期限')).toHaveValue('2000-01-01')
+  expect(within(dialog).getByRole('button', { name: '期限 2000年1月1日' })).toBeInTheDocument()
   expect(within(dialog).getByRole('button', { name: '色なし' })).toHaveAttribute('aria-pressed', 'true')
 })
 
@@ -81,10 +81,12 @@ test('編集して保存すると、PUT で送られ、ボードに反映され�
   await user.clear(description)
   await user.type(description, 'スーパーで')
   await user.click(screen.getByRole('button', { name: '青' }))
+  await user.click(screen.getByRole('button', { name: '期限 2000年1月1日' }))
   await user.click(screen.getByRole('button', { name: '期限を外す' }))
+  expect(screen.getByRole('button', { name: '期限なし' })).toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: '保存' }))
 
-  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  await waitFor(() => expect(screen.queryByRole('dialog', { name: 'カードを編集' })).not.toBeInTheDocument())
   const [url, init] = putCalls(fn)[0]
   expect(url).toBe('/api/cards/1')
   expect(JSON.parse(init!.body as string)).toEqual({

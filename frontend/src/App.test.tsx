@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import App from './App'
 import type { Card, Column } from './api/types'
+import { todayString } from './lib/date'
 
 const columns: Column[] = [
   { id: 2, name: '作業中', sortOrder: 1 },
@@ -108,7 +109,11 @@ test('「＋」から入力して Enter を押すと、列の一番上にカー�
   await user.click(screen.getByRole('button', { name: 'ToDoにカードを追加' }))
   await user.type(screen.getByPlaceholderText('タイトルを入力してください'), '新しいカード')
   await user.click(screen.getByRole('button', { name: '赤' }))
-  await user.type(screen.getByLabelText('期限'), '2030-05-01')
+  // 期限は、カレンダーから選ぶ（カレンダーを触っても、入力欄は閉じない）
+  await user.click(screen.getByRole('button', { name: '期限なし' }))
+  const [ty, tm, td] = todayString().split('-').map(Number)
+  await user.click(screen.getByRole('button', { name: `${ty}年${tm}月${td}日` }))
+  expect(screen.getByPlaceholderText('タイトルを入力してください')).toBeInTheDocument()
   await user.keyboard('{Enter}')
 
   const post = fn.mock.calls.find(([, init]) => init?.method === 'POST')
@@ -116,7 +121,7 @@ test('「＋」から入力して Enter を押すと、列の一番上にカー�
     title: '新しいカード',
     columnId: 1,
     color: 'red',
-    dueDate: '2030-05-01',
+    dueDate: todayString(),
   })
   await waitFor(() => {
     const titles = within(screen.getByRole('region', { name: 'ToDo' }))

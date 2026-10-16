@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { updateCard } from '../api/client'
 import type { Card, CardColor } from '../api/types'
+import { todayString } from '../lib/date'
 import { ColorPicker } from './ColorPicker'
+import { DuePicker } from './DuePicker'
 
 type Props = {
   card: Card
@@ -26,6 +28,7 @@ export function CardModal({ card, onSaved, onClose }: Props) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const savingRef = useRef(false) // 二重送信を防ぐ
+  const today = todayString()
 
   // Esc キーで、変更を捨てて閉じる（保存中は閉じない）
   useEffect(() => {
@@ -128,25 +131,8 @@ export function CardModal({ card, onSaved, onClose }: Props) {
             <ColorPicker value={color} onChange={setColor} />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-semibold text-gray-600" htmlFor="card-due">
-              期限
-            </label>
-            <input
-              id="card-due"
-              type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-              className="rounded border border-[#d5dbe8] px-1 text-sm"
-            />
-            {dueDate && (
-              <button
-                type="button"
-                onClick={() => setDueDate('')}
-                className="ml-2 text-sm text-gray-500 underline hover:text-gray-800"
-              >
-                期限を外す
-              </button>
-            )}
+            <p className="mb-1 text-sm font-semibold text-gray-600">期限</p>
+            <DuePicker value={dueDate} today={today} onChange={setDueDate} />
           </div>
         </div>
 

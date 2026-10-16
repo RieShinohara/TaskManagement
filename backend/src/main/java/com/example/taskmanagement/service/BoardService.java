@@ -2,6 +2,7 @@ package com.example.taskmanagement.service;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
@@ -108,6 +109,21 @@ public class BoardService {
 			}
 		}
 		return CardResponse.from(card);
+	}
+
+	// 列のカードを、期限の早い順に並べ直して、position を 0,1,2,… の連番で保存する。
+	// 期限のないカードは末尾。同じ期限のカードは、今の順番のまま（List.sort は、順番を保つ安定な並べ替え）。
+	// 並べ直したあとの、その列のカードを、上から順に返す
+	@Transactional
+	public List<CardResponse> sortColumnByDue(Long columnId) {
+		BoardColumn column = columnRepository.findById(columnId)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "列が見つかりません: " + columnId));
+		List<Card> cards = new ArrayList<>(cardRepository.findByColumnIdOrderByPositionAscIdAsc(columnId));
+		cards.sort(Comparator.comparing(Card::getDueDate, Comparator.nullsLast(Comparator.naturalOrder())));
+		for (int i = 0; i < cards.size(); i++) {
+			cards.get(i).moveTo(column, i);
+		}
+		return cards.stream().map(CardResponse::from).toList();
 	}
 
 	// カードを削除する。削除したカードは戻せない

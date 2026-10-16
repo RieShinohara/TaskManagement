@@ -107,6 +107,7 @@ GET http://localhost:8080/api/columns
 |---|---|
 | 200 | 成功 |
 | 201 | 作った |
+| 204 | 成功したが、返す中身はない（削除のあと） |
 | 400 | お願いの内容がおかしい（タイトルが空、色が不正、説明文が長すぎる） |
 | 404 | 見つからない（存在しない列、存在しないカード） |
 | 500 | サーバー側の問題 |
@@ -120,6 +121,7 @@ GET http://localhost:8080/api/columns
 | `GET /api/cards/{id}` | カードを1件取得 |
 | `POST /api/cards` | カードの追加 |
 | `PUT /api/cards/{id}` | カードの更新（タイトル・説明文・色・期限日） |
+| `DELETE /api/cards/{id}` | カードの削除。成功は `204`、存在しなければ `404` |
 
 ### 絞り込み検索：クエリパラメータ
 URLの `?` のあとに、条件を付ける。`&` で、つなげる。
@@ -248,3 +250,27 @@ Entity       Card.update(…) が値を入れ替える → 保存（@Transaction
 2. [backend/README.md](../backend/README.md) の例で、そのカードを `PUT` で更新する
 3. `SELECT id, title, description, color, due_date FROM card;` で、DBの中身が変わったか確かめる
 4. 空のタイトルで `PUT` して、`400` になるか、DBが変わらないか確かめる
+
+## 13. カードの削除（DELETE）
+`DELETE /api/cards/{id}` で、カードを1枚消す。更新（PUT）と同じ層を通る。
+
+```
+画面  DELETE /api/cards/5
+  ↓
+Controller   @DeleteMapping。成功したら 204 No Content を返す
+  ↓
+Service      deleteCard：カードを探す（なければ404）→ 削除する（@Transactional）
+  ↓
+Repository   delete(card) が DELETE 文を実行する
+```
+
+- **204 No Content**：「成功した。でも、返す中身はない」という意味。消したカードの情報を返しても使い道がないので、本文は空にする。`@ResponseStatus(HttpStatus.NO_CONTENT)` で指定し、メソッドの戻り値は `void`
+- **先に探してから消す**：いきなり `deleteById` を呼ばず、`findById` で探して、なければ404にする。「存在しないものを消そうとした」ことを、画面に伝えるため。2回続けて削除すると、2回目は404になる
+- **消したものは戻せない**：ゴミ箱は作らない（要件）。そのため、確認メッセージは、画面側（次のIssue）で出す
+- テスト `CardDeleteApiTests`：204が返る／消えたあとは404／一覧に出ない／ほかのカードは残る／存在しないカードは404／2回目は404
+
+### やってみよう
+1. カードを1枚追加して、IDを控える
+2. `DELETE` で消して、`204` が返るか確かめる（`curl -i -X DELETE http://localhost:8080/api/cards/ID`）
+3. もう一度同じ `DELETE` をして、`404` になるか確かめる
+4. `SELECT id, title FROM card;` で、DBから消えたか確かめる

@@ -207,7 +207,54 @@ class BackupApiTests {
 		assertThat(columnsOf(exportJson())).isEqualTo(before);
 	}
 
+	@Test
+	void 書き出しには_背景の設定が入っている() throws Exception {
+		setBackground("night");
+
+		mockMvc.perform(get("/api/backup")).andExpect(jsonPath("$.settings.background").value("night"));
+	}
+
+	@Test
+	void 書き出して_読み込むと_背景も元に戻る() throws Exception {
+		setBackground("sunset");
+		String backupText = exportJson();
+		setBackground("plain");
+
+		restore(backupText).andExpect(status().isNoContent());
+
+		mockMvc.perform(get("/api/settings")).andExpect(jsonPath("$.background").value("sunset"));
+	}
+
+	@Test
+	void 背景の設定がない古いファイルを読み込むと_青空になる() throws Exception {
+		setBackground("night");
+
+		restore(file("[{\"name\":\"ToDo\",\"cards\":[]}]")).andExpect(status().isNoContent());
+
+		mockMvc.perform(get("/api/settings")).andExpect(jsonPath("$.background").value("sky"));
+	}
+
+	@Test
+	void 背景の設定が不正なファイルは400になり_今のデータも背景も変わらない() throws Exception {
+		setBackground("night");
+		List<Object> before = columnsOf(exportJson());
+
+		for (String settings : List.of("{\"background\":\"rainbow\"}", "{\"background\":null}", "{}", "\"night\"")) {
+			restore("{\"app\":\"taskboard\",\"version\":1,\"settings\":" + settings
+					+ ",\"columns\":[{\"name\":\"A\",\"cards\":[]}]}").andExpect(status().isBadRequest());
+		}
+
+		assertThat(columnsOf(exportJson())).isEqualTo(before);
+		mockMvc.perform(get("/api/settings")).andExpect(jsonPath("$.background").value("night"));
+	}
+
 	// ---------- 道具 ----------
+
+	private void setBackground(String background) throws Exception {
+		mockMvc.perform(put("/api/settings").contentType(MediaType.APPLICATION_JSON)
+				.content("{\"background\":\"" + background + "\"}")).andExpect(status().isOk());
+	}
+
 
 	private ResultActions restore(String json) throws Exception {
 		return mockMvc.perform(post("/api/backup/restore").contentType(MediaType.APPLICATION_JSON).content(json));

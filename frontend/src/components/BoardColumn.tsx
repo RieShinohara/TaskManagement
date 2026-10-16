@@ -11,9 +11,10 @@ type Props = {
   cards: Card[]
   today: string
   onCardCreated: () => void
+  onCardOpen: (card: Card) => void
 }
 
-export function BoardColumn({ column, cards, today, onCardCreated }: Props) {
+export function BoardColumn({ column, cards, today, onCardCreated, onCardOpen }: Props) {
   const [adding, setAdding] = useState(false)
   const sorted = [...cards].sort((a, b) => a.position - b.position)
   return (
@@ -46,6 +47,7 @@ export function BoardColumn({ column, cards, today, onCardCreated }: Props) {
               key={card.id}
               card={card}
               today={today}
+              onOpen={onCardOpen}
               // 完了列のカードは、期限が過ぎていても赤くしない
               overdue={column.name !== DONE_COLUMN_NAME && !!card.dueDate && isOverdue(card.dueDate, today)}
             />

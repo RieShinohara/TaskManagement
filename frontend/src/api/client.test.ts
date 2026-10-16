@@ -1,5 +1,5 @@
 import { afterEach, expect, test, vi } from 'vitest'
-import { createCard, fetchCards } from './client'
+import { createCard, fetchCards, updateCard } from './client'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -57,4 +57,22 @@ test('カード追加で 400 が返ったときは、入力の確認を促すエ
 test('カード追加で接続できないときは、接続エラーにする', async () => {
   stubFetch(new TypeError('Failed to fetch'))
   await expect(createCard(input)).rejects.toThrow('サーバーに接続できません')
+})
+
+test('カード更新は、JSONで PUT する', async () => {
+  const updateInput = { title: '更新後', description: null, color: 'blue', dueDate: '2026-11-01' } as const
+  const fn = stubFetch({ ok: true, json: async () => ({ id: 5, ...updateInput }) })
+  await updateCard(5, updateInput)
+  expect(fn).toHaveBeenCalledWith('/api/cards/5', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updateInput),
+  })
+})
+
+test('カード更新で 404 が返ったときは、見つからないことを伝える', async () => {
+  stubFetch({ ok: false, status: 404 })
+  await expect(updateCard(5, { title: 'x', description: null, color: 'none', dueDate: null })).rejects.toThrow(
+    'カードが見つかりません',
+  )
 })

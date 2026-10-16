@@ -21,7 +21,7 @@ function App() {
             {board.message}
           </p>
         )}
-        {board.status === 'success' && <Board columns={board.columns} cards={board.cards} onCardCreated={reload} />}
+        {board.status === 'success' && <Board columns={board.columns} cards={board.cards} onCardCreated={reload} onCardUpdated={reload} />}
       </main>
     </div>
   )

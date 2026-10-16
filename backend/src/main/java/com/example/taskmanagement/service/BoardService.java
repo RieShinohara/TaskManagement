@@ -10,6 +10,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.example.taskmanagement.dto.CardCreateRequest;
 import com.example.taskmanagement.dto.CardResponse;
+import com.example.taskmanagement.dto.CardUpdateRequest;
 import com.example.taskmanagement.dto.ColumnResponse;
 import com.example.taskmanagement.entity.BoardColumn;
 import com.example.taskmanagement.entity.Card;
@@ -60,6 +61,17 @@ public class BoardService {
 
 		String color = (request.color() == null) ? "none" : request.color();
 		Card card = cardRepository.save(new Card(request.title().strip(), color, request.dueDate(), column, position));
+		return CardResponse.from(card);
+	}
+
+	// 編集できる4項目を置き換える。列と並び順は変えない。説明文が空（空白だけ）なら、なくす
+	@Transactional
+	public CardResponse updateCard(Long id, CardUpdateRequest request) {
+		Card card = cardRepository.findById(id)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "カードが見つかりません: " + id));
+		String description = (request.description() == null || request.description().isBlank()) ? null
+				: request.description();
+		card.update(request.title().strip(), description, request.color(), request.dueDate());
 		return CardResponse.from(card);
 	}
 

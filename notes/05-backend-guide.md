@@ -107,8 +107,8 @@ GET http://localhost:8080/api/columns
 |---|---|
 | 200 | 成功 |
 | 201 | 作った |
-| 400 | お願いの内容がおかしい（タイトルが空、色が不正） |
-| 404 | 見つからない（存在しない列） |
+| 400 | お願いの内容がおかしい（タイトルが空、色が不正、説明文が長すぎる） |
+| 404 | 見つからない（存在しない列、存在しないカード） |
 | 500 | サーバー側の問題 |
 
 ### 今あるAPI
@@ -119,6 +119,7 @@ GET http://localhost:8080/api/columns
 | `GET /api/cards` | カードの一覧。絞り込みができる |
 | `GET /api/cards/{id}` | カードを1件取得 |
 | `POST /api/cards` | カードの追加 |
+| `PUT /api/cards/{id}` | カードの更新（タイトル・説明文・色・期限日） |
 
 ### 絞り込み検索：クエリパラメータ
 URLの `?` のあとに、条件を付ける。`&` で、つなげる。
@@ -220,3 +221,30 @@ public class Card {
 3. バックエンドを止めて、もう一度起動し、`GET /api/cards` で、カードが残っているか確かめる
 4. `psql` に入って、`SELECT * FROM card;` を実行する
 5. DBを止めて（`docker compose stop db`）、バックエンドを起動し、エラーを見る。確かめたら、DBを起動し直す
+
+## 12. カードの更新（PUT）と、説明文の追加
+`PUT /api/cards/{id}` で、**タイトル・説明文・色・期限日**を、まとめて置き換える。流れは、追加（POST）と同じ層を通る。
+
+```
+画面  PUT /api/cards/5  {"title":"…","description":"…","color":"red","dueDate":"2026-11-01"}
+  ↓
+Controller   @PutMapping。入力をチェックする（CardUpdateRequest の @Valid）
+  ↓
+Service      updateCard：カードを探す（なければ404）→ 4項目を置き換える
+  ↓
+Entity       Card.update(…) が値を入れ替える → 保存（@Transactional）
+```
+
+- **PUT と PATCH**：PUT は「項目をまとめて置き換える」、PATCH は「送った項目だけ変える」。今回は、画面のモーダルが**いつも4項目を全部送る**ので、PUT にした。PATCH だと、「送っていない（変えない）」と「null を送った（消す）」を区別する必要があり、むずかしくなる
+- **空の値は「消す」**：`description` や `dueDate` を `null` で送ると、その項目がなくなる。空白だけの説明文も、`null`（なし）として保存する
+- **列と並び順は変えない**：`Card.update` は4項目だけを入れ替える。カードを動かすのは、ドラッグ＆ドロップの回で、別のAPIとして作る
+- **`@Transactional` だけで保存される**：Service の中でEntityの値を変えると、メソッドが終わるときに、JPA が自動で `UPDATE` を実行する（`save` を呼ばなくてよい）
+- **列の追加は、自動**：Entity に `description` を足すと、`ddl-auto: update` が、起動のときに card テーブルへ列を足す。既存のカードは、説明文が `null` のまま残る
+- **追加と更新で、チェックを分けた**：`CardCreateRequest`（列IDが要る、色は省略可）と `CardUpdateRequest`（列IDは要らない、色は必須）。同じに見えても、お願いの意味が違うので、別のクラスにした
+- テスト `CardUpdateApiTests`：更新できる／消せる／列と並び順が変わらない／2000文字の境界／400と404／検査に失敗したら内容が変わらない
+
+### やってみよう
+1. DBとバックエンドを起動して、カードを1枚追加する
+2. [backend/README.md](../backend/README.md) の例で、そのカードを `PUT` で更新する
+3. `SELECT id, title, description, color, due_date FROM card;` で、DBの中身が変わったか確かめる
+4. 空のタイトルで `PUT` して、`400` になるか、DBが変わらないか確かめる

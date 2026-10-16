@@ -91,7 +91,7 @@ erDiagram
 | | sort_order | integer、必須 |
 | card | id（主キー、自動採番） | bigint |
 | | title | varchar(255)、必須 |
-| | description | varchar(2000)、任意（**未実装**。講義13で追加する） |
+| | description | varchar(2000)、任意 |
 | | color | varchar(255)、必須（none / red / blue / green / yellow / gray。APIで検査する） |
 | | due_date | date、任意 |
 | | column_id（board_column.id への外部キー） | bigint、必須 |

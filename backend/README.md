@@ -48,6 +48,8 @@
 | `PUT /api/cards/{id}` | カードの内容（タイトル・説明文・色・期限日）を更新する（下記） |
 | `PUT /api/cards/{id}/move` | カードを動かす。別の列へも、同じ列の中でも（下記） |
 | `POST /api/columns/{id}/sort-by-due` | その列のカードを、期限の早い順に並べ直して保存する（下記） |
+| `GET /api/settings` | 設定（選んだ背景）を取得する。初めては青空（`sky`）（下記） |
+| `PUT /api/settings` | 設定（選んだ背景）を更新する（下記） |
 | `GET /api/backup` | 全データ（列とカード）を、バックアップファイルの形で返す（下記） |
 | `POST /api/backup/restore` | バックアップファイルの内容で、今のデータを**全部入れ替える**（下記） |
 | `DELETE /api/cards/{id}` | カードを削除する。成功は `204`（中身なし）、存在しなければ `404` |
@@ -101,6 +103,14 @@ Invoke-RestMethod http://localhost:8080/api/columns/1/sort-by-due -Method Post
 - 結果は `position` の 0,1,2,… の連番として保存され、並び直したあとの、その列のカードが、上から順に返る
 - 並び直したあとも、カードを動かせる（移動API）。新しく追加したカードは、列の一番上に入る
 - 存在しない列なら `404`
+
+設定（選んだ背景）:
+```powershell
+Invoke-RestMethod http://localhost:8080/api/settings
+Invoke-RestMethod http://localhost:8080/api/settings -Method Put -ContentType "application/json" -Body '{"background":"night"}'
+```
+- `background`：`plain`（無地）／`sky`（青空）／`sunset`（夕焼け）／`night`（星空）／`auto`（自動：時間帯）。違う値・空・無しは `400`
+- 設定は1件だけ。初めて取得したときは、青空（`sky`）。バックアップには、この設定が `settings` として入り、読み込むと戻る（`settings` がない古いファイルは、青空になる）
 
 バックアップ（書き出しと読み込み）:
 ```powershell

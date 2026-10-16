@@ -127,6 +127,10 @@ GET http://localhost:8080/api/columns
 | `POST /api/backup/restore` | バックアップの読み込み（全部入れ替え） |
 | `GET /api/settings` | 設定（選んだ背景）の取得 |
 | `PUT /api/settings` | 設定（選んだ背景）の更新 |
+| `GET /api/background-images` | 自分の背景画像の一覧 |
+| `GET /api/background-images/{slot}` | 自分の背景画像の取得（JPEG） |
+| `PUT /api/background-images/{slot}` | 自分の背景画像の登録・置き換え |
+| `DELETE /api/background-images/{slot}` | 自分の背景画像を消す（元に戻す） |
 | `DELETE /api/cards/{id}` | カードの削除。成功は `204`、存在しなければ `404` |
 
 ### 絞り込み検索：クエリパラメータ
@@ -394,3 +398,36 @@ Service      sortColumnByDue：列を探す（なければ404）→ 列のカー
 3. `{"background":"rainbow"}` を送って、`400` になるか確かめる
 4. `SELECT * FROM board_setting;` で、1件だけあることを確かめる
 5. `GET /api/backup` に、`"settings":{"background":"night"}` が入っていることを確かめる
+
+## 18. 自分の背景画像（画像をDBに保存する）
+青空・夕焼け・星空に、自分の画像を割り当てられるようにする。画像を**DBに保存**し、登録・取得・削除するAPIを作る。画面は、このあとのPRで作る。
+
+| ファイル | 役割 |
+|---|---|
+| `entity/UserBackgroundImage` | 画像のEntity（表 `user_background_image`）。`slot` が主キー、画像のバイト列、更新日時 |
+| `repository/UserBackgroundImageRepository` | 保存・検索。一覧用に、画像を読まない検索を足した |
+| `service/BackgroundImageService` | 登録・取得・削除と、検査（割り当て先、JPEG、大きさ） |
+| `controller/BackgroundImageController` | `GET`（一覧・画像）、`PUT`、`DELETE` |
+| `dto/BackgroundImageResponse` | 一覧と登録の返事（`slot` と `updatedAt`） |
+
+- **画像を、DBに入れる（bytea）**：画像のファイルは、バイト列（`byte[]`）として、1つの列に入れる。PostgreSQL では `bytea` 型。Hibernate に `@JdbcTypeCode(SqlTypes.VARBINARY)` と書くと、`oid`（別の場所に置く「ラージオブジェクト」）ではなく、**ふつうの `bytea` の列**になる。実際のDBで `pg_typeof(image)` を調べて、`bytea` を確かめた
+- **ファイルではなく、DBに入れた理由**：①ブラウザを変えても、PCを再起動しても残る ②DBと同じ場所にあるので、置き場所・権限・削除の同期を考えなくてよい ③縮小済みのJPEGで数百KBなので、3枚でも軽い。大きな画像を何百枚も扱うなら、ファイルに置くほうがよい
+- **割り当て先（slot）を、主キーにした**：「1つの割り当て先に、最大1枚」という決まりを、データの形で守る。登録すると、同じ `slot` の行を置き換える（なければ作る）。無地（plain）と自動（auto）には、割り当てない
+- **JPEGかどうかは、先頭の3バイトで見分ける**：JPEGのファイルは、必ず `FF D8 FF` で始まる（マジックナンバー）。ファイルの名前や、送られてきた `Content-Type` は、いくらでも偽れるので、**中身で調べる**。PNGや文字は、先頭が違うので、400になる
+- **大きさの上限は5MB**：画面が、横1920pxに縮小してから送るので、ふつうは数百KB。上限は、「画面を通さずに、巨大なデータを送られても、DBが膨らまない」ための安全弁。**ちょうど5MBは通り、1バイトでも超えると400**になることを、境目のテストで確かめた
+- **本文は、JPEGのバイト列そのもの**（`@RequestBody byte[]`）。JSONに包んだり、`multipart`（ファイルの送信の形式）にしたりしないので、サーバー側が簡単。空の本文は、Spring が400にする
+- **一覧では、画像を読まない**：`select new …(i.slot, i.updatedAt)` という検索で、画像の列を読まずに、`slot` と日時だけを取る。画像は大きいので、一覧のたびに読むのは無駄
+- **ETag で、送り直しを減らす**：画像を返すとき、登録（置き換え）の日時から作った `ETag` を付ける。ブラウザは、2回目から `If-None-Match` を付けて聞き、変わっていなければ **304**（本文なし）が返る。`Cache-Control: no-cache` は「使う前に、必ず聞く」という意味（保存しないという意味ではない）
+- **日時は、ミリ秒にそろえる**：`Instant.now()` はナノ秒まであるが、DBは精度が違う（マイクロ秒）。登録直後の返事と、DBから読んだ値が、少しずれてしまう。画面は日時を目印に使うので、`truncatedTo(ChronoUnit.MILLIS)` で、ミリ秒までにそろえた（テストで、同じ値になることを確かめた）
+- **バックアップには入れない**：仕様どおり。バックアップを書き出しても画像は入らず、読み込みで消えるのはカードと列だけ（画像は別の表）。テストで確かめた
+- テスト `BackgroundImageApiTests`（12件）：登録・一覧・取得（同じバイト列）／ETag の304と置き換え／登録し直すと1枚のまま／割り当て先ごとに別の画像／削除して404／なければ404／割り当て先が違えば404／JPEGでない・空・短すぎるは400／失敗しても元の画像は変わらない／5MBの境目／バックアップに入らず、読み込みでも残る
+  - 本物のJPEGは、テストの中で `ImageIO` を使って作る（個人の画像は使わない）
+  - 自分で作ったヘルパーの名前（`put`）が、静的インポートした `put` を**隠して**しまい、コンパイルエラーになった。ヘルパーは `register` にした
+
+### やってみよう
+1. `Invoke-RestMethod http://localhost:8080/api/background-images/sky -Method Put -ContentType "image/jpeg" -InFile my.jpg` で、JPEGを登録する
+2. `GET /api/background-images` で、一覧を見る（画像のデータは入っていない）
+3. `Invoke-WebRequest http://localhost:8080/api/background-images/sky -OutFile got.jpg` で取り出し、元の画像と同じか、開いて確かめる
+4. PNG（や、テキストファイル）を送って、`400` になるか確かめる。`/api/background-images/auto` に送って、`404` になるか確かめる
+5. `SELECT slot, pg_typeof(image), length(image) FROM user_background_image;` で、`bytea` で入っていることを確かめる
+6. `-Method Delete` で消して、`GET` が `404` になるか確かめる

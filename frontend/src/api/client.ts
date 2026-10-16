@@ -1,4 +1,13 @@
-import type { BackupFile, Card, CardCreateInput, CardMoveInput, CardSearch, CardUpdateInput, Column } from './types'
+import type {
+  BackupFile,
+  Card,
+  CardCreateInput,
+  CardMoveInput,
+  CardSearch,
+  CardUpdateInput,
+  Column,
+  Settings,
+} from './types'
 
 const CONNECTION_ERROR = 'サーバーに接続できません。バックエンドとDBが起動しているか確認してください。'
 
@@ -89,4 +98,17 @@ export function restoreBackup(file: BackupFile): Promise<void> {
     { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(file) },
     UNREADABLE_BACKUP,
   )
+}
+
+// 設定（選んだ背景）を取得する。初めては青空（sky）
+export function fetchSettings(): Promise<Settings> {
+  return getJson<Settings>('/api/settings')
+}
+
+export function updateSettings(settings: Settings): Promise<Settings> {
+  return request<Settings>('/api/settings', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(settings),
+  })
 }

@@ -50,6 +50,10 @@
 | `POST /api/columns/{id}/sort-by-due` | その列のカードを、期限の早い順に並べ直して保存する（下記） |
 | `GET /api/settings` | 設定（選んだ背景）を取得する。初めては青空（`sky`）（下記） |
 | `PUT /api/settings` | 設定（選んだ背景）を更新する（下記） |
+| `GET /api/background-images` | 登録した自分の背景画像の一覧（下記） |
+| `GET /api/background-images/{slot}` | 画像そのもの（JPEG）。登録がなければ `404` |
+| `PUT /api/background-images/{slot}` | 画像を登録（置き換え）する（下記） |
+| `DELETE /api/background-images/{slot}` | 登録した画像を消す（標準の画像に戻る）。成功は `204` |
 | `GET /api/backup` | 全データ（列とカード）を、バックアップファイルの形で返す（下記） |
 | `POST /api/backup/restore` | バックアップファイルの内容で、今のデータを**全部入れ替える**（下記） |
 | `DELETE /api/cards/{id}` | カードを削除する。成功は `204`（中身なし）、存在しなければ `404` |
@@ -111,6 +115,21 @@ Invoke-RestMethod http://localhost:8080/api/settings -Method Put -ContentType "a
 ```
 - `background`：`plain`（無地）／`sky`（青空）／`sunset`（夕焼け）／`night`（星空）／`auto`（自動：時間帯）。違う値・空・無しは `400`
 - 設定は1件だけ。初めて取得したときは、青空（`sky`）。バックアップには、この設定が `settings` として入り、読み込むと戻る（`settings` がない古いファイルは、青空になる）
+
+自分の背景画像:
+```powershell
+# 登録（本文は、JPEGのファイルそのもの）。{slot} は sky（青空）/ sunset（夕焼け）/ night（星空）
+Invoke-RestMethod http://localhost:8080/api/background-images/sky -Method Put -ContentType "image/jpeg" -InFile my.jpg
+# 取得（ファイルに保存）／削除（元に戻す）
+Invoke-WebRequest http://localhost:8080/api/background-images/sky -OutFile got.jpg
+Invoke-RestMethod http://localhost:8080/api/background-images/sky -Method Delete
+```
+- 割り当て先（`{slot}`）ごとに、最大1枚。登録済みの割り当て先に登録すると、置き換わる。`sky` / `sunset` / `night` 以外は `404`
+- 登録できるのは、**JPEG（先頭が FF D8 FF）で、5MB以下**。違うもの・空は `400`（登録されず、すでにある画像も変わらない）。画面が、横1920pxのJPEGに縮小してから送る
+- 画像は、DBに入る（bytea）。登録（置き換え）の日時（`updatedAt`）が、画像の ETag になり、変わっていなければ `304`（送り直さない）
+- 一覧（`GET /api/background-images`）は、`[{"slot":"sky","updatedAt":"…"}]` の形で、画像のデータは入らない
+- **バックアップには入らない**。バックアップを読み込んでも、登録済みの画像はそのまま残る
+- 画像のファイルは、リポジトリに入れない（個人の画像のおそれがある）
 
 バックアップ（書き出しと読み込み）:
 ```powershell

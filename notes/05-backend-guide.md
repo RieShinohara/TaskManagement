@@ -121,6 +121,7 @@ GET http://localhost:8080/api/columns
 | `GET /api/cards/{id}` | カードを1件取得 |
 | `POST /api/cards` | カードの追加 |
 | `PUT /api/cards/{id}` | カードの更新（タイトル・説明文・色・期限日） |
+| `PUT /api/cards/{id}/move` | カードの移動（別の列へ、同じ列の中で） |
 | `DELETE /api/cards/{id}` | カードの削除。成功は `204`、存在しなければ `404` |
 
 ### 絞り込み検索：クエリパラメータ
@@ -274,3 +275,31 @@ Repository   delete(card) が DELETE 文を実行する
 2. `DELETE` で消して、`204` が返るか確かめる（`curl -i -X DELETE http://localhost:8080/api/cards/ID`）
 3. もう一度同じ `DELETE` をして、`404` になるか確かめる
 4. `SELECT id, title FROM card;` で、DBから消えたか確かめる
+
+## 14. カードの移動（`PUT /api/cards/{id}/move`）
+ドラッグ＆ドロップで、カードを別の列へ、または同じ列の中で動かすためのAPI。送る内容は、**動かした先の列（`columnId`）と、その列の中での位置（`index`、0が一番上）**だけ。
+
+```
+画面  PUT /api/cards/5/move  {"columnId":2,"index":0}
+  ↓
+Controller   @PutMapping("/cards/{id}/move")。入力をチェックする（CardMoveRequest の @Valid）
+  ↓
+Service      moveCard：カードと列を探す（なければ404）→ 並びを作り直す → 連番を振る
+  ↓
+Entity       Card.moveTo(列, 位置) が、列と position を入れ替える（@Transactional で保存）
+```
+
+- **なぜ、更新（PUT）とは別のAPIか**：更新の `PUT /api/cards/{id}` は、「列と並び順は変えない」と決めて作った。目的が違う（中身を直す／場所を動かす）ので、窓口を分けた。URLの `/move` は、「動かす」という操作の名前
+- **position の持ち方：サーバーが、連番に振り直す**。画面が「position を何にするか」を計算すると、間違えやすい（前後のカードの値の間に入れる、など）。そこで、画面は「どの列の何番目か」だけを送り、サーバーが `0,1,2,…` に振り直す。これで、新しいカードの `-1, -2` のような負の値も、動かした列では消える
+- **同じ列の中の移動と、別の列への移動は、同じ処理**：①動かす前の列の一覧から、動かすカードを抜く ②動かした先の列の一覧の `index` 番目に、差し込む ③それぞれ、上から `0,1,2,…` を振る。同じ列のときは、①と②が同じ一覧になる
+- **`index` が大きすぎるとき**は、エラーにせず、一番下に入れる（`Math.min(index, 件数)`）。画面と通信している間に、列のカード数が変わっても、動くようにするため
+- **`@Transactional` の中で、Entity の値を変えるだけで保存される**（更新と同じ）。複数のカードの `position` を変えても、全部まとめて成功か、全部取り消しになる。途中で失敗して、並びが半端になることはない
+- **並びが同じ値のとき**：`findByColumnIdOrderByPositionAscIdAsc` は、position が同じカードを、id の順に並べる。古いデータで position が重なっていても、毎回同じ順番になる
+- テスト `CardMoveApiTests`：別の列の先頭／末尾（範囲外の位置）／途中／同じ列の下へ・上へ／ほかのカードの順番が変わらない／タイトルなどが変わらない／取り直しても同じ／負の position が連番に直る／カード・列がなければ404（カードは動かない）／位置が負・列IDなしは400
+  - DBは、ほかのテストと共有しているので、「自分のカードが、期待の位置にいるか」と「列の position が連番か」を調べる
+
+### やってみよう
+1. カードを2枚追加して、IDを控える
+2. 片方を、別の列の先頭へ動かす（`columnId` を変えて `index` を 0 にする）
+3. `SELECT id, column_id, position FROM card ORDER BY column_id, position;` で、動かした列と、動かす前の列の `position` が、0から始まる連番になったか確かめる
+4. `index` に 9999 を送って、一番下に入るか確かめる。`-1` を送って、`400` になるか確かめる

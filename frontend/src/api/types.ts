@@ -58,3 +58,11 @@ export type BackupFile = {
   exportedAt?: string
   columns: unknown[]
 }
+
+// 選べる背景。plain：無地、sky：青空、sunset：夕焼け、night：星空、auto：自動（時間帯）
+export type Background = 'plain' | 'sky' | 'sunset' | 'night' | 'auto'
+
+// 設定（バックエンドの SettingResponse と同じ形）
+export type Settings = {
+  background: Background
+}

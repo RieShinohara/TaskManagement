@@ -2,6 +2,7 @@ import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useState } from 'react'
 import type { Card, Column } from '../api/types'
+import type { Tone } from '../lib/background'
 import { isOverdue } from '../lib/date'
 import { cardDragId, columnDropId } from '../lib/dragIds'
 import { CardComposer } from './CardComposer'
@@ -18,6 +19,30 @@ type Props = {
   dragDisabled: boolean
   onSortByDue: (columnId: number) => void // 「期限順」ボタンを押したとき
   sorting: boolean // この列を並び直している最中（ボタンを押せなくする）
+  tone: Tone // 背景に合わせた、列の色合い
+}
+
+// 列の色合い。背景があるとき（light）は、列を少し透けさせる（約75%）。星空（dark）は、暗い紺色にして、文字を明るくする。
+// カードは、どの背景でも不透明のまま（CardItem）
+const TONE_CLASS: Record<Tone, { section: string; title: string; plus: string; empty: string }> = {
+  plain: {
+    section: 'border-[#d8dfed] bg-[#e9edf5]',
+    title: 'text-gray-800',
+    plus: 'text-gray-600 hover:bg-white hover:text-blue-600',
+    empty: 'text-gray-500',
+  },
+  light: {
+    section: 'border-[#d8dfed] bg-[#e9edf5]/75 backdrop-blur-[6px]',
+    title: 'text-gray-800',
+    plus: 'text-gray-600 hover:bg-white hover:text-blue-600',
+    empty: 'text-gray-500',
+  },
+  dark: {
+    section: 'border-white/20 bg-[#1c264e]/60 backdrop-blur-[6px]',
+    title: 'text-gray-100',
+    plus: 'text-gray-100 hover:bg-white/20 hover:text-white',
+    empty: 'text-gray-300',
+  },
 }
 
 export function BoardColumn({
@@ -29,7 +54,9 @@ export function BoardColumn({
   dragDisabled,
   onSortByDue,
   sorting,
+  tone,
 }: Props) {
+  const toneClass = TONE_CLASS[tone]
   const [adding, setAdding] = useState(false)
   const sorted = [...cards].sort((a, b) => a.position - b.position)
   // 列全体を、カードを落とせる場所にする（カードが1枚もない列にも、落とせるように）
@@ -38,10 +65,11 @@ export function BoardColumn({
     <section
       ref={setNodeRef}
       aria-label={column.name}
-      className="w-80 shrink-0 rounded-xl border border-[#d8dfed] bg-[#e9edf5] p-3"
+      data-tone={tone}
+      className={`w-80 shrink-0 rounded-xl border p-3 ${toneClass.section}`}
     >
       <div className="mb-3 flex items-center justify-between px-1">
-        <h2 className="text-base font-bold text-gray-800">{column.name}</h2>
+        <h2 className={`text-base font-bold ${toneClass.title}`}>{column.name}</h2>
         <div className="flex items-center gap-1">
           <button
             type="button"
@@ -56,7 +84,7 @@ export function BoardColumn({
             type="button"
             aria-label={`${column.name}にカードを追加`}
             onClick={() => setAdding(true)}
-            className="rounded px-2 text-xl leading-none text-gray-600 hover:bg-white hover:text-blue-600"
+            className={`rounded px-2 text-xl leading-none ${toneClass.plus}`}
           >
             ＋
           </button>
@@ -69,7 +97,7 @@ export function BoardColumn({
       )}
       <SortableContext items={sorted.map((card) => cardDragId(card.id))} strategy={verticalListSortingStrategy}>
         {sorted.length === 0 ? (
-          <p className="px-1 py-4 text-sm text-gray-500">カードがありません</p>
+          <p className={`px-1 py-4 text-sm ${toneClass.empty}`}>カードがありません</p>
         ) : (
           <ul className="flex flex-col gap-2">
             {sorted.map((card) => (

@@ -18,6 +18,8 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
     if (response.status === 404) throw new Error('カードが見つかりません。画面を読み込み直してください。')
     throw new Error(`サーバーからエラーが返りました（${response.status}）`)
   }
+  // 204 No Content（削除のあと）は、中身が空。JSONとして読むと失敗するので、読まずに終わる
+  if (response.status === 204) return undefined as T
   return response.json() as Promise<T>
 }
 
@@ -43,6 +45,10 @@ export function createCard(input: CardCreateInput): Promise<Card> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
   })
+}
+
+export function deleteCard(id: number): Promise<void> {
+  return request<void>(`/api/cards/${id}`, { method: 'DELETE' })
 }
 
 export function updateCard(id: number, input: CardUpdateInput): Promise<Card> {

@@ -24,6 +24,10 @@ public class Card {
 	@Column(nullable = false)
 	private String title;
 
+	// 説明文。未設定は null（2000文字まで）
+	@Column(length = 2000)
+	private String description;
+
 	// none / red / blue / green / yellow / gray
 	@Column(nullable = false)
 	private String color;
@@ -61,6 +65,10 @@ public class Card {
 		return title;
 	}
 
+	public String getDescription() {
+		return description;
+	}
+
 	public String getColor() {
 		return color;
 	}
@@ -75,6 +83,14 @@ public class Card {
 
 	public int getPosition() {
 		return position;
+	}
+
+	// 編集できる4項目を、まとめて置き換える。列と並び順は、ここでは変えない
+	public void update(String title, String description, String color, LocalDate dueDate) {
+		this.title = title;
+		this.description = description;
+		this.color = color;
+		this.dueDate = dueDate;
 	}
 
 }

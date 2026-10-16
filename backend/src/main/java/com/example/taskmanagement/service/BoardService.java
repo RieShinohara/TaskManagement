@@ -75,4 +75,12 @@ public class BoardService {
 		return CardResponse.from(card);
 	}
 
+	// カードを削除する。削除したカードは戻せない
+	@Transactional
+	public void deleteCard(Long id) {
+		Card card = cardRepository.findById(id)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "カードが見つかりません: " + id));
+		cardRepository.delete(card);
+	}
+
 }

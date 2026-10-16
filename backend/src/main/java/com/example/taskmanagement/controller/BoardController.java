@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.taskmanagement.dto.CardCreateRequest;
+import com.example.taskmanagement.dto.CardMoveRequest;
 import com.example.taskmanagement.dto.CardResponse;
 import com.example.taskmanagement.dto.CardUpdateRequest;
 import com.example.taskmanagement.dto.ColumnResponse;
@@ -63,6 +64,12 @@ public class BoardController {
 	@PutMapping("/cards/{id}")
 	public CardResponse updateCard(@PathVariable Long id, @Valid @RequestBody CardUpdateRequest request) {
 		return boardService.updateCard(id, request);
+	}
+
+	// カードを動かす（別の列へ、または同じ列の中で）。動かした先の列と、その中での位置を送る
+	@PutMapping("/cards/{id}/move")
+	public CardResponse moveCard(@PathVariable Long id, @Valid @RequestBody CardMoveRequest request) {
+		return boardService.moveCard(id, request);
 	}
 
 	// カードを削除する。成功したら、中身のない 204 No Content を返す

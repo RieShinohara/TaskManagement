@@ -46,6 +46,7 @@
 | `GET /api/cards/{id}` | カードを1件取得する。ないIDは `404` |
 | `POST /api/cards` | カードを追加する（下記） |
 | `PUT /api/cards/{id}` | カードの内容（タイトル・説明文・色・期限日）を更新する（下記） |
+| `PUT /api/cards/{id}/move` | カードを動かす。別の列へも、同じ列の中でも（下記） |
 | `DELETE /api/cards/{id}` | カードを削除する。成功は `204`（中身なし）、存在しなければ `404` |
 
 絞り込み（どれも省略できる。組み合わせられる）:
@@ -74,9 +75,19 @@ Invoke-RestMethod http://localhost:8080/api/cards/1 -Method Put -ContentType "ap
 ```
 - 編集できる4項目を、**いつもまとめて**送る：`title`（必須、255文字まで）、`description`（任意、2000文字まで）、`color`（必須。none / red / blue / green / yellow / gray）、`dueDate`（任意）
 - `description` と `dueDate` を空（`null`）にして送ると、その項目は「なくなる」。空白だけの説明文も、なくなる
-- カードの列と並び順（`columnId`、`position`）は、変わらない。動かすのは、ドラッグ＆ドロップの回で作る
+- カードの列と並び順（`columnId`、`position`）は、変わらない。動かすのは、次の「カードの移動」のAPI
 - タイトルが空・長すぎる、説明文が長すぎる、色が不正・無いなら `400`。存在しないカードなら `404`。成功すると、更新後のカードが返る
 - カードの応答（`GET`・`POST`・`PUT` 共通）には、`description` が含まれる（未設定は `null`）
+
+カードの移動（PowerShell の例）:
+```powershell
+Invoke-RestMethod http://localhost:8080/api/cards/1/move -Method Put -ContentType "application/json" `
+  -Body '{"columnId":2,"index":0}'
+```
+- `columnId`（必須）：動かした先の列。今と同じ列なら、同じ列の中での並び替え
+- `index`（必須、0以上）：その列の中での位置。0が一番上。カード数より大きい数は、一番下になる
+- サーバーが、動かす前の列と動かした先の列の `position` を、**0,1,2,… の連番に振り直す**。画面は、`position` の数値を計算しない
+- 位置が負・`columnId` や `index` が無いなら `400`。存在しないカード・列なら `404`。成功すると、動かした後のカードが返る
 
 テーブルは、バックエンドの起動時に Entity（Javaのクラス）から自動で作られる（`ddl-auto: update`）。列の最初の3件も、起動時に入る。
 

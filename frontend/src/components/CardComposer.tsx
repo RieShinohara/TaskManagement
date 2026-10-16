@@ -2,7 +2,9 @@ import { useRef, useState, type FocusEvent, type KeyboardEvent } from 'react'
 import { createCard } from '../api/client'
 import type { CardColor } from '../api/types'
 import { CARD_BG } from '../lib/cardColors'
+import { todayString } from '../lib/date'
 import { ColorPicker } from './ColorPicker'
+import { DuePicker } from './DuePicker'
 
 type Props = {
   columnId: number
@@ -17,6 +19,7 @@ export function CardComposer({ columnId, onCreated, onClose }: Props) {
   const [dueDate, setDueDate] = useState('')
   const [error, setError] = useState<string | null>(null)
   const submitting = useRef(false) // 二重送信を防ぐ
+  const today = todayString()
 
   async function submit() {
     if (submitting.current) return
@@ -42,9 +45,12 @@ export function CardComposer({ columnId, onCreated, onClose }: Props) {
     if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
       e.preventDefault()
       void submit()
-    } else if (e.key === 'Escape') {
-      onClose()
     }
+  }
+
+  // Esc は、入力欄でも期限のボタンでも、取り消す（カレンダーを開いているときは、カレンダーが先に受け取る）
+  function handleContainerKeyDown(e: KeyboardEvent<HTMLDivElement>) {
+    if (e.key === 'Escape') onClose()
   }
 
   // 入力欄の外に出たとき：入力があれば追加、空なら閉じる（色や期限の操作では閉じない）
@@ -54,7 +60,7 @@ export function CardComposer({ columnId, onCreated, onClose }: Props) {
   }
 
   return (
-    <div onBlur={handleBlur} className={`${CARD_BG[color]} rounded-lg p-3 shadow-md`}>
+    <div onBlur={handleBlur} onKeyDown={handleContainerKeyDown} className={`${CARD_BG[color]} rounded-lg p-3 shadow-md`}>
       <input
         autoFocus
         type="text"
@@ -68,14 +74,7 @@ export function CardComposer({ columnId, onCreated, onClose }: Props) {
       />
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <ColorPicker value={color} onChange={setColor} />
-        <input
-          type="date"
-          aria-label="期限"
-          value={dueDate}
-          onChange={(e) => setDueDate(e.target.value)}
-          onKeyDown={handleKeyDown}
-          className="rounded border border-[#d5dbe8] bg-white px-1 text-sm"
-        />
+        <DuePicker value={dueDate} today={today} onChange={setDueDate} />
       </div>
       <p className="mt-2 text-xs text-gray-500">Enterで追加　Escで取り消し</p>
       {error && (

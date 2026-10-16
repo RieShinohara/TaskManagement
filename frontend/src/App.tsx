@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { EMPTY_SEARCH, type CardSearch } from './api/types'
 import { Board } from './components/Board'
+import { BackupControls } from './components/BackupControls'
 import { SearchBar } from './components/SearchBar'
 import { useBoard } from './hooks/useBoard'
 
@@ -14,7 +15,10 @@ function App() {
     <div className="min-h-screen bg-[#fafbfd] text-gray-800">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#d5dbe8] bg-white px-6 py-3">
         <h1 className="text-[22px] font-bold">タスク管理</h1>
-        <SearchBar onSearch={setSearch} />
+        <div className="flex flex-wrap items-center gap-3">
+          <SearchBar onSearch={setSearch} />
+          <BackupControls onRestored={reload} />
+        </div>
       </header>
       {searching && (
         <p role="status" className="border-b border-amber-200 bg-amber-50 px-6 py-2 text-sm text-amber-800">

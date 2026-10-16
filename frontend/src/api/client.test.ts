@@ -1,5 +1,14 @@
 import { afterEach, expect, test, vi } from 'vitest'
-import { createCard, deleteCard, fetchCards, moveCard, sortColumnByDue, updateCard } from './client'
+import {
+  createCard,
+  deleteCard,
+  fetchBackup,
+  fetchCards,
+  moveCard,
+  restoreBackup,
+  sortColumnByDue,
+  updateCard,
+} from './client'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -116,4 +125,34 @@ test('期限順の並び替えは、列を指定して POST し、並び直し�
 test('期限順の並び替えで接続できないときは、接続エラーにする', async () => {
   stubFetch(new TypeError('Failed to fetch'))
   await expect(sortColumnByDue(1)).rejects.toThrow('サーバーに接続できません')
+})
+
+const backupFile = { app: 'taskboard', version: 1, columns: [{ name: 'ToDo', cards: [] }] }
+
+test('バックアップの書き出しは、GET して、ファイルの中身を受け取る', async () => {
+  const fn = stubFetch({ ok: true, json: async () => backupFile })
+  await expect(fetchBackup()).resolves.toEqual(backupFile)
+  expect(fn).toHaveBeenCalledWith('/api/backup')
+})
+
+test('バックアップの読み込みは、JSONで POST し、204（中身なし）でもエラーにならない', async () => {
+  const json = vi.fn()
+  const fn = stubFetch({ ok: true, status: 204, json })
+  await expect(restoreBackup(backupFile)).resolves.toBeUndefined()
+  expect(fn).toHaveBeenCalledWith('/api/backup/restore', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(backupFile),
+  })
+  expect(json).not.toHaveBeenCalled()
+})
+
+test('バックアップの読み込みで 400 が返ったときは、読み込めないファイルとして扱う', async () => {
+  stubFetch({ ok: false, status: 400 })
+  await expect(restoreBackup(backupFile)).rejects.toThrow('このファイルは読み込めません')
+})
+
+test('バックアップの読み込みで接続できないときは、接続エラーにする', async () => {
+  stubFetch(new TypeError('Failed to fetch'))
+  await expect(restoreBackup(backupFile)).rejects.toThrow('サーバーに接続できません')
 })

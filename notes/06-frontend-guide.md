@@ -3,6 +3,23 @@
 `frontend/` の中の、React + TypeScript の画面。**本番の画面**になる。
 使い方は [frontend/README.md](../frontend/README.md)、技術の決定は [docs/tech-stack.md](../docs/tech-stack.md) を参照。
 
+## 章の一覧
+| 章 | 内容 |
+|---|---|
+| 1〜5 | 土台：道具の役割、データが表示されるまでの流れ、フォルダの構成、学んだポイント、やってみよう |
+| 6 | カードの新規登録 |
+| 7 | カードの編集（モーダル） |
+| 8 | 自作カレンダー（期限日） |
+| 9 | カードの削除（確認メッセージ付き） |
+| 10 | ドラッグ＆ドロップ（dnd-kit） |
+| 11 | 「期限順」ボタン |
+| 12 | バックアップ（保存と読み込み） |
+| 13 | 背景（選ぶ・表示する） |
+| 14 | カードの色の調整（青） |
+| 15 | 自分の画像を背景にする（縮小して送る） |
+
+画面とAPIは、セットで作った。対応するバックエンドの章は、[学習ノートの入口](README.md) の対応表を参照。
+
 ## 1. 道具の役割
 | 道具 | 役割 | たとえ |
 |---|---|---|
@@ -22,9 +39,10 @@
 ```
 ブラウザ → (5173番) Vite → /api/... は、そのまま (8080番) バックエンドへ中継 → DB
 ```
-1. 画面を開くと、`App` が `useBoard` を呼ぶ
+1. 画面を開くと、`App` が `useBoard` を呼ぶ（同時に、背景のために `useSettings` と `useBackgroundImages` も、設定と画像の一覧を取りにいく）
 2. `useBoard` が、`/api/columns`（列）と `/api/cards`（カード）を、同時に取りにいく
 3. 結果を、`Board` → `BoardColumn` → `CardItem` の順に渡して、表示する
+4. カードを追加・編集・移動したときは、APIにお願いして、成功したら `reload()` で取り直す（ドラッグ＆ドロップは、先に画面を動かしてから保存する。10章）
 
 ### なぜ、プロキシ（中継）を使うのか
 - 画面（5173番）から、別の場所（8080番）に直接お願いすると、ブラウザが、安全のために止める（**CORS**）
@@ -36,13 +54,25 @@
 | 場所 | 役割 |
 |---|---|
 | `api/types.ts` | APIが返すデータの「型」（バックエンドの Response と同じ形） |
-| `api/client.ts` | APIを呼ぶ関数（取得 `fetchCards` など、追加 `createCard`、更新 `updateCard`、削除 `deleteCard`、移動 `moveCard`）。失敗したときの、分かりやすいエラーメッセージも作る |
+| `App.tsx` | 画面全体。ヘッダー（検索、背景、バックアップ）、背景の層、ボードを組み合わせる |
+| `api/client.ts` | APIを呼ぶ関数（取得 `fetchCards` など、追加 `createCard`、更新 `updateCard`、削除 `deleteCard`、移動 `moveCard`、期限順 `sortColumnByDue`、バックアップ `fetchBackup` / `restoreBackup`、設定 `fetchSettings` / `updateSettings`、自分の画像 `fetchBackgroundImages` など）。失敗したときの、分かりやすいエラーメッセージも作る |
 | `hooks/useBoard.ts` | 列とカードを取得して、「読み込み中／エラー／成功」を管理する。`reload()` で取り直せる |
-| `components/` | 画面の部品（SearchBar、Board、BoardColumn、CardItem、CardComposer、CardModal、ColorPicker、DuePicker、Calendar） |
+| `hooks/useSettings.ts` | 選んだ背景の取得と保存。自動（時間帯）の見直し |
+| `hooks/useBackgroundImages.ts` | 自分の背景画像の取得・登録・削除 |
+| `hooks/usePopover.ts` | ボタンの下に開く小さな窓（カレンダー、背景の選択）の、位置決めと閉じる処理 |
+| `components/` | 画面の部品。ボード：Board、BoardColumn、CardItem ／ カード：CardComposer、CardModal、ColorPicker、DuePicker、Calendar ／ 検索：SearchBar ／ バックアップ：BackupControls、ConfirmDialog ／ 背景：BackgroundPicker、BackgroundLayer |
 | `lib/date.ts` | 期限の表示（「期限 10月15日」）と、期限切れの判定 |
 | `lib/calendar.ts` | カレンダーの計算（6週間分の日付、前後の月） |
 | `lib/moveCard.ts` | カードを動かした結果の計算（別の列へ、同じ列の中で。position の連番の振り直し）。画面を使わない「ただの関数」 |
 | `lib/dragIds.ts` | ドラッグ＆ドロップで使う目印（`card-1`、`column-1`）。カードと列のIDが同じ数字でも、区別できるようにする |
+| `lib/cardColors.ts` | カードの色（6色）の定義。色を変えるときは、ここの1か所 |
+| `lib/backup.ts` | バックアップのファイル名（日時つき）、ファイルの軽い検査、JSONの保存 |
+| `lib/background.ts` | 背景の選択肢、自動（時間帯）の判定、列の色合い |
+| `lib/image.ts` | 画像の種類と大きさの判定、横1920pxへの縮小 |
+| `index.css` | 背景の見た目（標準の画像と、代わりのグラデーション） |
+| `public/backgrounds/` | 標準の背景画像3枚と、出どころを書いた `CREDITS.md` |
+
+**画面を使わない関数（`lib/`）に、計算や判定を切り出す**のが、この画面の作り方の特徴。画面の部品（`components/`）から離しておくと、境目の値（4:59 と 5:00 など）を、単体テストで確かめやすい。
 
 ## 4. 学んだポイント
 - **状態（state）**：画面が覚えている値。値が変わると、React が画面を描き直す

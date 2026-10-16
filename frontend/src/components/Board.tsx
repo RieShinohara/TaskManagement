@@ -98,7 +98,8 @@ export function Board({ columns, cards, onCardCreated, onCardUpdated, onCardMove
     finishDrag()
     const id = parseCardDragId(active.id)
     const target = over ? targetOf(over) : null
-    // 列の外で離したら、元の位置に戻る
+    // どこの上でもないとき（closestCorners では、まず起こらない）は、元の位置に戻す。
+    // 列の外で離したときは、いちばん近い列に入る。つかんでいる間の Esc は、onDragCancel で取り消す
     if (id === null || !target) {
       setPending(null)
       return

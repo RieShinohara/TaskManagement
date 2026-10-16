@@ -1,4 +1,4 @@
-import type { Card, CardCreateInput, CardSearch, Column } from './types'
+import type { Card, CardCreateInput, CardSearch, CardUpdateInput, Column } from './types'
 
 const CONNECTION_ERROR = 'サーバーに接続できません。バックエンドとDBが起動しているか確認してください。'
 
@@ -13,7 +13,9 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
   if (!response.ok) {
     // バックエンドが止まっているとき、プロキシは 502 などを返す
     if ([502, 503, 504].includes(response.status)) throw new Error(CONNECTION_ERROR)
-    if (response.status === 400) throw new Error('入力内容を確認してください（タイトルは必須で、255文字までです）')
+    if (response.status === 400)
+      throw new Error('入力内容を確認してください（タイトルは必須で255文字まで、説明文は2000文字までです）')
+    if (response.status === 404) throw new Error('カードが見つかりません。画面を読み込み直してください。')
     throw new Error(`サーバーからエラーが返りました（${response.status}）`)
   }
   return response.json() as Promise<T>
@@ -38,6 +40,14 @@ export function fetchCards(search: CardSearch): Promise<Card[]> {
 export function createCard(input: CardCreateInput): Promise<Card> {
   return request<Card>('/api/cards', {
     method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+}
+
+export function updateCard(id: number, input: CardUpdateInput): Promise<Card> {
+  return request<Card>(`/api/cards/${id}`, {
+    method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
   })

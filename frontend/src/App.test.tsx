@@ -11,9 +11,9 @@ const columns: Column[] = [
 ]
 
 const cards: Card[] = [
-  { id: 1, title: '牛乳を買う', color: 'none', dueDate: '2000-01-01', columnId: 1, position: 1 },
-  { id: 2, title: '部屋の掃除', color: 'blue', dueDate: null, columnId: 1, position: 0 },
-  { id: 3, title: '銀行で記帳する', color: 'gray', dueDate: '2000-01-01', columnId: 3, position: 0 },
+  { id: 1, title: '牛乳を買う', description: null, color: 'none', dueDate: '2000-01-01', columnId: 1, position: 1 },
+  { id: 2, title: '部屋の掃除', description: null, color: 'blue', dueDate: null, columnId: 1, position: 0 },
+  { id: 3, title: '銀行で記帳する', description: null, color: 'gray', dueDate: '2000-01-01', columnId: 3, position: 0 },
 ]
 
 function mockApi(cardsToReturn: Card[] = cards) {
@@ -86,7 +86,7 @@ function mockApiWithCreate() {
   const fn = vi.fn((url: string, init?: RequestInit) => {
     if (init?.method === 'POST') {
       const body = JSON.parse(init.body as string)
-      const created: Card = { id: 99, ...body, position: -1 }
+      const created: Card = { id: 99, description: null, ...body, position: -1 }
       stored.push(created)
       return Promise.resolve({ ok: true, status: 201, json: async () => created } as Response)
     }

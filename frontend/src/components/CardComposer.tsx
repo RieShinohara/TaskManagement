@@ -1,7 +1,8 @@
 import { useRef, useState, type FocusEvent, type KeyboardEvent } from 'react'
 import { createCard } from '../api/client'
-import { CARD_COLORS, type CardColor } from '../api/types'
-import { CARD_BG, CARD_COLOR_LABEL } from '../lib/cardColors'
+import type { CardColor } from '../api/types'
+import { CARD_BG } from '../lib/cardColors'
+import { ColorPicker } from './ColorPicker'
 
 type Props = {
   columnId: number
@@ -66,22 +67,7 @@ export function CardComposer({ columnId, onCreated, onClose }: Props) {
         className="w-full rounded border border-[#d5dbe8] bg-white px-2 py-1 outline-none focus:border-blue-400"
       />
       <div className="mt-2 flex flex-wrap items-center gap-2">
-        <div role="group" aria-label="色" className="flex gap-1">
-          {CARD_COLORS.map((c) => (
-            <button
-              key={c}
-              type="button"
-              aria-label={CARD_COLOR_LABEL[c]}
-              aria-pressed={color === c}
-              // ボタンを押しても、入力欄からフォーカスを外さない
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => setColor(c)}
-              className={`${CARD_BG[c]} h-5 w-5 rounded-full border ${
-                color === c ? 'border-2 border-gray-700' : 'border-gray-300'
-              }`}
-            />
-          ))}
-        </div>
+        <ColorPicker value={color} onChange={setColor} />
         <input
           type="date"
           aria-label="期限"

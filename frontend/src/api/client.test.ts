@@ -1,7 +1,10 @@
 import { afterEach, expect, test, vi } from 'vitest'
 import {
+  backgroundImageUrl,
   createCard,
+  deleteBackgroundImage,
   deleteCard,
+  fetchBackgroundImages,
   fetchBackup,
   fetchCards,
   fetchSettings,
@@ -10,6 +13,7 @@ import {
   sortColumnByDue,
   updateCard,
   updateSettings,
+  uploadBackgroundImage,
 } from './client'
 
 afterEach(() => vi.unstubAllGlobals())
@@ -179,4 +183,43 @@ test('設定を取得・更新できないときは、接続エラーにする',
   stubFetch(new TypeError('Failed to fetch'))
   await expect(fetchSettings()).rejects.toThrow('サーバーに接続できません')
   await expect(updateSettings({ background: 'sky' })).rejects.toThrow('サーバーに接続できません')
+})
+
+test('登録済みの画像の一覧は、GET して受け取る', async () => {
+  const list = [{ slot: 'sky', updatedAt: '2026-10-16T09:00:00Z' }]
+  const fn = stubFetch({ ok: true, json: async () => list })
+  await expect(fetchBackgroundImages()).resolves.toEqual(list)
+  expect(fn).toHaveBeenCalledWith('/api/background-images')
+})
+
+test('画像の登録は、JPEGのバイト列そのものを PUT する', async () => {
+  const saved = { slot: 'night', updatedAt: '2026-10-16T09:00:00Z' }
+  const fn = stubFetch({ ok: true, json: async () => saved })
+  const jpeg = new Blob(['jpeg-bytes'], { type: 'image/jpeg' })
+
+  await expect(uploadBackgroundImage('night', jpeg)).resolves.toEqual(saved)
+
+  expect(fn).toHaveBeenCalledWith('/api/background-images/night', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'image/jpeg' },
+    body: jpeg,
+  })
+})
+
+test('画像の登録で 400 が返ったときは、登録できなかったと伝える', async () => {
+  stubFetch({ ok: false, status: 400 })
+  await expect(uploadBackgroundImage('sky', new Blob(['x']))).rejects.toThrow('画像を登録できませんでした')
+})
+
+test('画像を元に戻すときは、DELETE して、204（中身なし）でもエラーにならない', async () => {
+  const fn = stubFetch({ ok: true, status: 204 })
+  await expect(deleteBackgroundImage('sunset')).resolves.toBeUndefined()
+  expect(fn).toHaveBeenCalledWith('/api/background-images/sunset', { method: 'DELETE' })
+})
+
+test('画像の URL には、登録日時が付く（置き換えたら、別の URL になる）', () => {
+  const a = backgroundImageUrl({ slot: 'sky', updatedAt: '2026-10-16T09:00:00.000Z' })
+  const b = backgroundImageUrl({ slot: 'sky', updatedAt: '2026-10-16T10:00:00.000Z' })
+  expect(a).toBe('/api/background-images/sky?v=2026-10-16T09%3A00%3A00.000Z')
+  expect(b).not.toBe(a)
 })

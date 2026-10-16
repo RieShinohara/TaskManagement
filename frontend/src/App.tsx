@@ -6,25 +6,38 @@ import { BackupControls } from './components/BackupControls'
 import { Board } from './components/Board'
 import { SearchBar } from './components/SearchBar'
 import { useBoard } from './hooks/useBoard'
+import { useBackgroundImages } from './hooks/useBackgroundImages'
 import { useSettings } from './hooks/useSettings'
-import { toneOf } from './lib/background'
+import { isUserImageSlot, toneOf } from './lib/background'
 
 function App() {
   const [search, setSearch] = useState<CardSearch>(EMPTY_SEARCH)
   const { board, reload } = useBoard(search)
   const settings = useSettings()
+  const userImages = useBackgroundImages()
+  // いま出す場面（自動なら、時刻で決まった場面）に、自分の画像を登録していれば、それを出す
+  const userImageUrl = isUserImageSlot(settings.scene) ? userImages.urls[settings.scene] : undefined
   // 絞り込み中は、画面に出ているのが列の一部のカードだけ。「何番目」が決められないので、カードを動かせなくする
   const searching = search.keyword.trim() !== '' || search.dueBefore !== ''
 
   return (
     // 背景の層（BackgroundLayer）は、ほかの部品の後ろに置く。この枠には、色を付けない（ページの色は、body に付いている）
     <div className="min-h-screen text-gray-800">
-      <BackgroundLayer scene={settings.scene} />
+      <BackgroundLayer scene={settings.scene} userImageUrl={userImageUrl} />
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#d5dbe8] bg-white px-6 py-3">
         <h1 className="text-[22px] font-bold">タスク管理</h1>
         <div className="flex flex-wrap items-center gap-3">
           <SearchBar onSearch={setSearch} />
-          <BackgroundPicker value={settings.background} onSelect={settings.setBackground} />
+          <BackgroundPicker
+            value={settings.background}
+            onSelect={settings.setBackground}
+            imageUrls={userImages.urls}
+            onRegisterImage={async (slot, file) => {
+              await userImages.register(slot, file)
+              settings.setBackground(slot) // 登録できたら、その背景に切り替える
+            }}
+            onRemoveImage={userImages.remove}
+          />
           <BackupControls
             onRestored={() => {
               reload()

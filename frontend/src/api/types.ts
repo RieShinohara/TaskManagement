@@ -49,3 +49,12 @@ export type CardMoveInput = {
   columnId: number
   index: number
 }
+
+// バックアップファイルの形（バックエンドの BackupFile と同じ）。列は左から順、カードは上から順。
+// 中身は、画面では作り変えない（そのまま保存し、そのまま送る）ので、細かい型は付けていない
+export type BackupFile = {
+  app: string
+  version: number
+  exportedAt?: string
+  columns: unknown[]
+}

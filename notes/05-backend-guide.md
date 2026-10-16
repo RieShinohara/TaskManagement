@@ -122,6 +122,7 @@ GET http://localhost:8080/api/columns
 | `POST /api/cards` | カードの追加 |
 | `PUT /api/cards/{id}` | カードの更新（タイトル・説明文・色・期限日） |
 | `PUT /api/cards/{id}/move` | カードの移動（別の列へ、同じ列の中で） |
+| `POST /api/columns/{id}/sort-by-due` | 列のカードを期限順に並べ直して保存 |
 | `DELETE /api/cards/{id}` | カードの削除。成功は `204`、存在しなければ `404` |
 
 ### 絞り込み検索：クエリパラメータ
@@ -303,3 +304,29 @@ Entity       Card.moveTo(列, 位置) が、列と position を入れ替える�
 2. 片方を、別の列の先頭へ動かす（`columnId` を変えて `index` を 0 にする）
 3. `SELECT id, column_id, position FROM card ORDER BY column_id, position;` で、動かした列と、動かす前の列の `position` が、0から始まる連番になったか確かめる
 4. `index` に 9999 を送って、一番下に入るか確かめる。`-1` を送って、`400` になるか確かめる
+
+## 15. 期限順の並び替え（`POST /api/columns/{id}/sort-by-due`）
+列のカードを、期限の早い順に並べ直して、その結果を `position` として保存する。
+
+```
+画面  POST /api/columns/1/sort-by-due
+  ↓
+Controller   @PostMapping("/columns/{id}/sort-by-due")。並び直したカードの一覧を返す
+  ↓
+Service      sortColumnByDue：列を探す（なければ404）→ 列のカードを上から順に取る → 期限順に並べ替える → 0,1,2,… を振る
+```
+
+- **なぜ POST か**：GET は「見る」、PUT は「中身を置き換える」。「並べ直して、保存せよ」という**操作の指示**なので、POST にした。URLの `sort-by-due` は、その操作の名前（移動の `/move` と同じ考え方）
+- **並べ替えは、サーバーでやる**。画面だけで並べ替えて見せても、画面を開き直したら元に戻る。「並べた順が保存される」という要件を守るため、サーバーが `position` を書き換える。画面は、結果を受け取って、表示するだけ
+- **期限なしは末尾**：`Comparator.comparing(Card::getDueDate, Comparator.nullsLast(Comparator.naturalOrder()))`。`nullsLast` が「`null`（期限なし）を最後に回す」という指定。`naturalOrder` は、日付の自然な順（早いほうが先）
+- **同じ期限は、今の順番のまま**：Java の `List.sort` は**安定な並べ替え**（同じ値の順番を変えない）。並べ替える前に、`position` 順（同じなら id 順）で取っておくので、同じ期限のカードは、今の並びのまま残る。2回押しても、結果が変わらない
+- **移動API（14章）と同じ「連番の振り直し」**：並べ替えたあとに、`moveTo(列, i)` で `0,1,2,…` を振る。これで、負の `position` も、連番に直る。並び直した後でも、カードを手で動かせる（手動が優先）。新しいカードは「最小値−1」で入るので、一番上に来る
+- **ほかの列には、触らない**：対象は、URLで指定した列だけ
+- テスト `CardSortApiTests`：期限順で、期限なしが末尾／保存されて連番／同じ期限は今の順番のまま／2回押しても同じ／ほかの列は変わらない／並び直したあとに追加したカードは一番上／存在しない列は404
+  - DBは共有なので、「列全体が、期限順になっているか」を調べる
+
+### やってみよう
+1. 期限の違うカードと、期限のないカードを、数枚追加する
+2. `Invoke-RestMethod http://localhost:8080/api/columns/1/sort-by-due -Method Post` を実行して、返ってきた順番を見る
+3. `SELECT id, title, due_date, position FROM card WHERE column_id = 1 ORDER BY position;` で、DBの並びも変わったか確かめる
+4. 同じ期限のカードを2枚作り、並び直しても、2枚の順番が変わらないか確かめる

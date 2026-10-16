@@ -41,6 +41,12 @@ public class BoardController {
 		return boardService.findColumns();
 	}
 
+	// 列のカードを、期限の早い順に並べ直して保存する（期限なしは末尾）。並べ直したカードを、上から順に返す
+	@PostMapping("/columns/{id}/sort-by-due")
+	public List<CardResponse> sortColumnByDue(@PathVariable Long id) {
+		return boardService.sortColumnByDue(id);
+	}
+
 	// 絞り込みは、どれも省略できる。例：/api/cards?columnId=1&keyword=買い&dueBefore=2026-10-20
 	@GetMapping("/cards")
 	public List<CardResponse> getCards(@RequestParam(required = false) Long columnId,

@@ -66,3 +66,8 @@ export function moveCard(id: number, input: CardMoveInput): Promise<Card> {
     body: JSON.stringify(input),
   })
 }
+
+// 列のカードを、期限の早い順に並べ直して保存する（期限なしは末尾）。並べ直したカードが、上から順に返る
+export function sortColumnByDue(columnId: number): Promise<Card[]> {
+  return request<Card[]>(`/api/columns/${columnId}/sort-by-due`, { method: 'POST' })
+}

@@ -13,7 +13,7 @@ import {
 } from '@dnd-kit/core'
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import { useRef, useState } from 'react'
-import { moveCard as moveCardApi } from '../api/client'
+import { moveCard as moveCardApi, sortColumnByDue } from '../api/client'
 import type { Card, Column } from '../api/types'
 import { CARD_BG } from '../lib/cardColors'
 import { isOverdue, todayString } from '../lib/date'
@@ -44,7 +44,8 @@ export function Board({ columns, cards, onCardCreated, onCardUpdated, onCardMove
   const [editing, setEditing] = useState<Card | null>(null) // 編集のモーダルで開いているカード
   const [pending, setPending] = useState<Pending | null>(null)
   const [activeId, setActiveId] = useState<number | null>(null) // いま、つかんでいるカード
-  const [moveError, setMoveError] = useState<string | null>(null)
+  const [moveError, setMoveError] = useState<string | null>(null) // 動かす・並べ替えの失敗
+  const [sortingColumnId, setSortingColumnId] = useState<number | null>(null) // 期限順に並べ直している列
   const justDraggedRef = useRef(false) // ドラッグの直後に、「押した」と誤って受け取らないため
 
   // 画面に出す並び。動かした直後は、保存の結果を待たずに、先に動かした状態を見せる
@@ -122,6 +123,22 @@ export function Board({ columns, cards, onCardCreated, onCardUpdated, onCardMove
     }
   }
 
+  // 「期限順」ボタン：サーバーに並べ直して保存してもらい、できたらボードを取り直す
+  // （絞り込み中でも、取り直すときに、同じ絞り込みの結果になる）
+  async function handleSortByDue(columnId: number) {
+    if (sortingColumnId !== null) return
+    setSortingColumnId(columnId)
+    setMoveError(null)
+    try {
+      await sortColumnByDue(columnId)
+      onCardMoved()
+    } catch (e) {
+      setMoveError(e instanceof Error ? e.message : '並べ替えに失敗しました')
+    } finally {
+      setSortingColumnId(null)
+    }
+  }
+
   function handleDragCancel() {
     finishDrag()
     setPending(null)
@@ -174,6 +191,8 @@ export function Board({ columns, cards, onCardCreated, onCardUpdated, onCardMove
             onCardCreated={onCardCreated}
             onCardOpen={openCard}
             dragDisabled={dragDisabled}
+            onSortByDue={(id) => void handleSortByDue(id)}
+            sorting={sortingColumnId !== null}
           />
         ))}
         {editing && (

@@ -125,6 +125,8 @@ GET http://localhost:8080/api/columns
 | `POST /api/columns/{id}/sort-by-due` | 列のカードを期限順に並べ直して保存 |
 | `GET /api/backup` | 全データの書き出し（バックアップ） |
 | `POST /api/backup/restore` | バックアップの読み込み（全部入れ替え） |
+| `GET /api/settings` | 設定（選んだ背景）の取得 |
+| `PUT /api/settings` | 設定（選んだ背景）の更新 |
 | `DELETE /api/cards/{id}` | カードの削除。成功は `204`、存在しなければ `404` |
 
 ### 絞り込み検索：クエリパラメータ
@@ -363,3 +365,32 @@ Service      sortColumnByDue：列を探す（なければ404）→ 列のカー
 3. `Invoke-RestMethod http://localhost:8080/api/backup/restore -Method Post -ContentType "application/json; charset=utf-8" -InFile backup.json` で読み込む。画面に、消したカードが戻る
 4. `backup.json` の `"app"` を `"other"` に変えて読み込み、`400` になるか、データが変わらないかを確かめる
 5. （注意）`backup.json` は、個人の予定が入るので、リポジトリに入れない
+
+## 17. 設定（選んだ背景）と、バックアップへの組み込み
+背景機能の最初の段階。選んだ背景（無地・青空・夕焼け・星空・自動）をDBに保存し、画面を開き直しても残るようにする。画面は、次のPRで作る。
+
+| ファイル | 役割 |
+|---|---|
+| `entity/BoardSetting` | 設定のEntity（表 `board_setting`）。**1件だけ**持つので、`id` はいつも 1 |
+| `repository/BoardSettingRepository` | 保存・検索（`JpaRepository` を継承するだけ） |
+| `service/SettingService` | `find()`（なければ作る）と `update(背景)` |
+| `controller/SettingController` | `GET /api/settings`、`PUT /api/settings` |
+| `dto/SettingResponse` / `SettingUpdateRequest` | 返す形／受け取る形（値の検査つき） |
+
+- **1件だけの設定の持ち方**：カードのように増えるものではないので、`id` を自動採番にせず、**固定の 1**にした（`@GeneratedValue` を付けない）。「ある（1件）か、ない（初めて）か」だけを考えればよい。取得のとき、なければ初期値（青空）で作る
+- **初期値は、2か所で用意する**：①起動したときに `DataInitializer` が、なければ作る（列と同じ）。②万一なくても、取得のときに作る（`SettingService.load()` の `orElseGet`）。どちらかが抜けても、動く
+- **値の検査は、正規表現（`@Pattern`）**：`plain|sky|sunset|night|auto`。決まった選択肢なので、列挙（enum）にもできるが、DBには文字列で入れ、検査だけをAPIの入口で行った（色 `color` と同じ作り）。同じ正規表現を、`SettingUpdateRequest` と `BackupSettings` の両方で使うので、`BoardSetting.BACKGROUND_PATTERN` という**定数**にまとめた（アノテーションの値には、定数しか書けない）
+- **バックアップへの組み込み**：`BackupFile` に、省略できる項目 `settings` を足した。**形式の version は 1 のまま**：項目を「足した」だけで、古いファイルも、そのまま読めるため（`settings` がなければ青空）。形式を壊す変更（項目の削除や意味の変更）のときに、version を上げる
+  - 書き出し：現在の背景を `settings.background` に入れる
+  - 読み込み：`settings` があればその背景に、なければ青空にする。同じトランザクションの中なので、列・カード・背景が、まとめて成功か、まとめて取り消し。`settings` の値が不正なら、`@Valid` で400になり、何も変わらない
+- **`export()` から `@Transactional(readOnly = true)` を外した**：書き出しの中で `SettingService.find()` を呼ぶと、設定がまだないとき、INSERT が必要になる。**読み取り専用の中で書くとエラー**になるので、外した（ふだんは、起動時に作られるので書かない）
+- **自分の背景画像には、触らない**：読み込みで消すのは、カードと列だけ。画像は別の表（このあと③で作る）なので、そのまま残る
+- テスト：`SettingApiTests`（行を消した状態で取得すると青空で作られる／全ての背景に更新できて、取り直しても残る／不正な値・空・無しは400で変わらない）、`BackupApiTests` に追加（書き出しに背景が入る／往復で背景が戻る／設定がない古いファイルは青空／設定が不正なら400で、データも背景も変わらない）
+  - 設定は、DB全体で1つだけ。ほかのテストと共有なので、**前の値を覚えておき、終わったら戻す**
+
+### やってみよう
+1. `Invoke-RestMethod http://localhost:8080/api/settings` で、背景を取得する（初めては `sky`）
+2. `-Method Put -Body '{"background":"night"}'` で更新して、もう一度取得する。バックエンドを再起動しても、`night` のまま
+3. `{"background":"rainbow"}` を送って、`400` になるか確かめる
+4. `SELECT * FROM board_setting;` で、1件だけあることを確かめる
+5. `GET /api/backup` に、`"settings":{"background":"night"}` が入っていることを確かめる

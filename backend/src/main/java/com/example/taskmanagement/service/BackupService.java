@@ -12,7 +12,9 @@ import org.springframework.web.server.ResponseStatusException;
 import com.example.taskmanagement.dto.BackupCard;
 import com.example.taskmanagement.dto.BackupColumn;
 import com.example.taskmanagement.dto.BackupFile;
+import com.example.taskmanagement.dto.BackupSettings;
 import com.example.taskmanagement.entity.BoardColumn;
+import com.example.taskmanagement.entity.BoardSetting;
 import com.example.taskmanagement.entity.Card;
 import com.example.taskmanagement.repository.BoardColumnRepository;
 import com.example.taskmanagement.repository.CardRepository;
@@ -26,14 +28,18 @@ public class BackupService {
 
 	private final BoardColumnRepository columnRepository;
 	private final CardRepository cardRepository;
+	private final SettingService settingService;
 
-	public BackupService(BoardColumnRepository columnRepository, CardRepository cardRepository) {
+	public BackupService(BoardColumnRepository columnRepository, CardRepository cardRepository,
+			SettingService settingService) {
 		this.columnRepository = columnRepository;
 		this.cardRepository = cardRepository;
+		this.settingService = settingService;
 	}
 
 	// 全部の列とカードを、入れ子の形にして返す。並び順は、配列の順（列は左から、カードは上から）
-	@Transactional(readOnly = true)
+	// （設定がまだなければ、設定を作る処理が入るので、読み取り専用にはしない）
+	@Transactional
 	public BackupFile export() {
 		List<BackupColumn> columns = columnRepository.findAllByOrderBySortOrderAsc().stream()
 				.map(column -> new BackupColumn(column.getName(),
@@ -42,7 +48,8 @@ public class BackupService {
 										card.getDueDate()))
 								.toList()))
 				.toList();
-		return new BackupFile(BackupFile.APP_NAME, BackupFile.VERSION, Instant.now(), columns);
+		BackupSettings settings = new BackupSettings(settingService.find().background());
+		return new BackupFile(BackupFile.APP_NAME, BackupFile.VERSION, Instant.now(), settings, columns);
 	}
 
 	// 今あるカードと列を全部消して、ファイルの内容に入れ替える。
@@ -73,6 +80,11 @@ public class BackupService {
 			}
 			cardRepository.saveAll(cards);
 		}
+
+		// 背景の設定。ファイルになければ（古いバックアップ）、初期値の青空にする。自分の画像には、触らない
+		String background = (file.settings() == null) ? BoardSetting.DEFAULT_BACKGROUND
+				: file.settings().background();
+		settingService.update(background);
 	}
 
 }

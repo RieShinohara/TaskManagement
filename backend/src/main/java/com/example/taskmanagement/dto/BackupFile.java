@@ -17,6 +17,8 @@ public record BackupFile(
 		@NotNull(message = "app は必須です") @Pattern(regexp = BackupFile.APP_NAME, message = "このアプリのバックアップファイルではありません") String app,
 		@NotNull(message = "version は必須です") @Min(value = 1, message = "対応していないバージョンです") @Max(value = 1, message = "対応していないバージョンです") Integer version,
 		Instant exportedAt,
+		// 背景の設定。省略できる（古いファイルには、ない。読み込むと、青空になる）
+		@Valid BackupSettings settings,
 		@NotEmpty(message = "列は1つ以上必要です") @Size(max = 50, message = "列が多すぎます") List<@Valid @NotNull BackupColumn> columns) {
 
 	public static final String APP_NAME = "taskboard";

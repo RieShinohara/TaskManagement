@@ -4,7 +4,7 @@ import type { CardColor } from '../api/types'
 export const CARD_BG: Record<CardColor, string> = {
   none: 'bg-white',
   red: 'bg-[#fde4e4]',
-  blue: 'bg-[#dfeafd]',
+  blue: 'bg-[#c8dcfc]',
   green: 'bg-[#dff5e6]',
   yellow: 'bg-[#fdf4cf]',
   gray: 'bg-[#e2e5eb]',

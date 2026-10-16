@@ -105,7 +105,7 @@ test('編集して保存すると、PUT で送られ、ボードに反映され�
     dueDate: null,
   })
   const item = (await screen.findByRole('button', { name: /牛乳と卵を買う/ })).closest('li')!
-  expect(item).toHaveClass('bg-[#dfeafd]')
+  expect(item).toHaveClass('bg-[#c8dcfc]')
   expect(item).not.toHaveTextContent('期限')
 })
 

@@ -57,7 +57,7 @@ test('カードの色が背景に付く（色なしは白）', async () => {
   render(<App />)
   await screen.findByRole('region', { name: 'ToDo' })
   const items = screen.getAllByRole('listitem')
-  expect(items.find((li) => li.textContent?.includes('部屋の掃除'))).toHaveClass('bg-[#dfeafd]')
+  expect(items.find((li) => li.textContent?.includes('部屋の掃除'))).toHaveClass('bg-[#c8dcfc]')
   expect(items.find((li) => li.textContent?.includes('牛乳を買う'))).toHaveClass('bg-white')
 })
 

@@ -45,6 +45,7 @@
 | `GET /api/cards` | カードの一覧。列の順、列の中の並び順。絞り込みができる（下記） |
 | `GET /api/cards/{id}` | カードを1件取得する。ないIDは `404` |
 | `POST /api/cards` | カードを追加する（下記） |
+| `PUT /api/cards/{id}` | カードの内容（タイトル・説明文・色・期限日）を更新する（下記） |
 
 絞り込み（どれも省略できる。組み合わせられる）:
 
@@ -64,6 +65,17 @@ Invoke-RestMethod http://localhost:8080/api/cards -Method Post -ContentType "app
 - `title`（必須、255文字まで）、`columnId`（必須）、`color`（任意。none / red / blue / green / yellow / gray。省略すると none）、`dueDate`（任意）
 - 新しいカードは、その列の一番上に入る
 - タイトルが空・色が不正なら `400`、存在しない列なら `404`
+
+カードの更新（PowerShell の例。日本語を送るときは、上の追加と同じく UTF-8 のバイト列にする）:
+```powershell
+Invoke-RestMethod http://localhost:8080/api/cards/1 -Method Put -ContentType "application/json; charset=utf-8" `
+  -Body ([Text.Encoding]::UTF8.GetBytes('{"title":"牛乳と卵を買う","description":"スーパーで","color":"blue","dueDate":"2026-10-20"}'))
+```
+- 編集できる4項目を、**いつもまとめて**送る：`title`（必須、255文字まで）、`description`（任意、2000文字まで）、`color`（必須。none / red / blue / green / yellow / gray）、`dueDate`（任意）
+- `description` と `dueDate` を空（`null`）にして送ると、その項目は「なくなる」。空白だけの説明文も、なくなる
+- カードの列と並び順（`columnId`、`position`）は、変わらない。動かすのは、ドラッグ＆ドロップの回で作る
+- タイトルが空・長すぎる、説明文が長すぎる、色が不正・無いなら `400`。存在しないカードなら `404`。成功すると、更新後のカードが返る
+- カードの応答（`GET`・`POST`・`PUT` 共通）には、`description` が含まれる（未設定は `null`）
 
 テーブルは、バックエンドの起動時に Entity（Javaのクラス）から自動で作られる（`ddl-auto: update`）。列の最初の3件も、起動時に入る。
 

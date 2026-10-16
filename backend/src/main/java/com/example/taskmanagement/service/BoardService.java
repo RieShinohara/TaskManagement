@@ -1,6 +1,7 @@
 package com.example.taskmanagement.service;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
@@ -9,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.example.taskmanagement.dto.CardCreateRequest;
+import com.example.taskmanagement.dto.CardMoveRequest;
 import com.example.taskmanagement.dto.CardResponse;
 import com.example.taskmanagement.dto.CardUpdateRequest;
 import com.example.taskmanagement.dto.ColumnResponse;
@@ -72,6 +74,39 @@ public class BoardService {
 		String description = (request.description() == null || request.description().isBlank()) ? null
 				: request.description();
 		card.update(request.title().strip(), description, request.color(), request.dueDate());
+		return CardResponse.from(card);
+	}
+
+	// カードを、指定の列の index 番目（0が一番上）へ動かす。同じ列の中でも、別の列へでも、同じ処理。
+	// 動かしたあと、関係する列（動かす前の列と、動かした先の列）の position を、0,1,2,… の連番に振り直す。
+	// index が列のカード数より大きいときは、一番下に入れる
+	@Transactional
+	public CardResponse moveCard(Long id, CardMoveRequest request) {
+		Card card = cardRepository.findById(id)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "カードが見つかりません: " + id));
+		BoardColumn target = columnRepository.findById(request.columnId())
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+						"列が見つかりません: " + request.columnId()));
+		Long sourceColumnId = card.getColumn().getId();
+
+		// 動かす前の列の残り（動かすカードを除く）。先に作る（あとで、カードの列が変わるため）
+		List<Card> source = new ArrayList<>(cardRepository.findByColumnIdOrderByPositionAscIdAsc(sourceColumnId));
+		source.removeIf(c -> c.getId().equals(id));
+
+		// 動かした先の列に、カードを差し込む（同じ列のときは、source と同じ並びになる）
+		List<Card> destination = sourceColumnId.equals(target.getId()) ? source
+				: new ArrayList<>(cardRepository.findByColumnIdOrderByPositionAscIdAsc(target.getId()));
+		destination.add(Math.min(request.index(), destination.size()), card);
+
+		// 動かした先の列は、全員を連番にして、列もそろえる。動かす前の列（別の列のとき）は、残りを詰める
+		for (int i = 0; i < destination.size(); i++) {
+			destination.get(i).moveTo(target, i);
+		}
+		if (destination != source) {
+			for (int i = 0; i < source.size(); i++) {
+				source.get(i).moveTo(source.get(i).getColumn(), i);
+			}
+		}
 		return CardResponse.from(card);
 	}
 

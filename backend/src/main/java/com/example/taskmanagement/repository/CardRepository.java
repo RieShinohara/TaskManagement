@@ -24,6 +24,9 @@ public interface CardRepository extends JpaRepository<Card, Long> {
 	List<Card> search(@Param("columnId") Long columnId, @Param("keyword") String keyword,
 			@Param("dueBefore") LocalDate dueBefore);
 
+	// その列のカードを、上から順に取る。position が同じ（古いデータなど）ときは、id の順で決める
+	List<Card> findByColumnIdOrderByPositionAscIdAsc(Long columnId);
+
 	// その列で一番小さい position。カードがなければ null
 	@Query("select min(c.position) from Card c where c.column.id = :columnId")
 	Integer findMinPositionByColumnId(@Param("columnId") Long columnId);

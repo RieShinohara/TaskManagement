@@ -93,4 +93,10 @@ public class Card {
 		this.dueDate = dueDate;
 	}
 
+	// 入っている列と、列の中の並び順を変える（カードの移動・並び替え）。中身の項目は、変えない
+	public void moveTo(BoardColumn column, int position) {
+		this.column = column;
+		this.position = position;
+	}
+
 }

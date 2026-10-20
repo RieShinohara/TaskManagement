@@ -72,7 +72,7 @@ erDiagram
 
 - 登録していない割り当て先には、データを持たない（標準の画像で表示する）
 - 「元に戻す」を行うと、その割り当て先のデータを削除する
-- **保存先は、バックエンドのDB（2026-10-16 決定）**：表 `user_background_image`（`slot` が主キー、`image` は bytea、`updated_at`）。画像は、画面が横1920pxのJPEGに縮小してから送るので、1枚あたり数百KB。サーバーは、JPEGの先頭の目印と、5MB以下であることを検査する。DBは、このPCのDocker上にあるので、「画像は、このPCの中にだけ保存し、外部には送らない」は守られる
+- **保存先は、バックエンドのDB（2026-10-16 決定）**：表 `user_background_image`（`slot` が主キー、`image` は bytea、`updated_at`）。画像は、画面が横1920pxのJPEGに縮小してから送るので、1枚あたり数百KB。サーバーは、JPEGの先頭の目印と、5MB以下であることを検査する（5MBを超える本文は、全部を読み込む前に、`413` で断る）。DBは、このPCのDocker上にあるので、「画像は、このPCの中にだけ保存し、外部には送らない」は守られる
 - API：`GET /api/background-images`（登録済みの一覧）、`GET /api/background-images/{slot}`（画像）、`PUT /api/background-images/{slot}`（登録・置き換え）、`DELETE /api/background-images/{slot}`（元に戻す）。`{slot}` は sky / sunset / night 以外なら404
 
 ## 3. データに関する決めごと

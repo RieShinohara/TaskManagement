@@ -28,6 +28,7 @@ export function Calendar({ value, today, onSelect, onClear, onEscape }: Props) {
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key !== 'Escape') return
       e.stopPropagation()
+      e.preventDefault() // 外側のモーダル（<dialog>）が、Esc で一緒に閉じないようにする
       onEscape()
     }
     document.addEventListener('keydown', handleKeyDown, true)

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { usePopover } from '../hooks/usePopover'
 import { formatDue } from '../lib/date'
@@ -13,6 +14,9 @@ type Props = {
 // カレンダーは、画面に固定して（fixed）、body の直下に出す。列やモーダルの枠で、切り取られないようにするため
 export function DuePicker({ value, today, onChange }: Props) {
   const { open, setOpen, close, position, triggerRef, popoverRef } = usePopover()
+  // カレンダーを出す場所。モーダル（<dialog>）の中にあるときは、その中に出す。
+  // モーダルが開いている間、モーダルの外は、操作できない状態（inert）になるので、body に出すと、押せなくなる
+  const [container, setContainer] = useState<HTMLElement>(document.body)
 
   return (
     <>
@@ -23,7 +27,14 @@ export function DuePicker({ value, today, onChange }: Props) {
         aria-expanded={open}
         // 押しても、入力欄からフォーカスを外さない
         onMouseDown={(e) => e.preventDefault()}
-        onClick={() => (open ? close() : setOpen(true))}
+        onClick={() => {
+          if (open) {
+            close()
+            return
+          }
+          setContainer(triggerRef.current?.closest('dialog') ?? document.body)
+          setOpen(true)
+        }}
         className={`rounded border border-[#d5dbe8] bg-white px-2 py-0.5 text-sm hover:bg-gray-50 ${
           value ? 'text-gray-800' : 'text-gray-500'
         }`}
@@ -52,7 +63,7 @@ export function DuePicker({ value, today, onChange }: Props) {
               onEscape={close}
             />
           </div>,
-          document.body,
+          container,
         )}
     </>
   )

@@ -10,7 +10,7 @@ React + TypeScript + Vite + Tailwind CSS で作る、ボード画面。バック
 |---|---|
 | 開発サーバーを起動（http://localhost:5173） | `npm run dev` |
 | テスト（Vitest） | `npm test` |
-| 静的チェック（oxlint） | `npm run lint` |
+| 静的チェック（oxlint。アクセシビリティの規則を含む。警告も失敗にする） | `npm run lint` |
 | 本番用にビルド | `npm run build` |
 
 - 初めて使うときは、先に `npm install`

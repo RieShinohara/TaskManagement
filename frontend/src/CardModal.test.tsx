@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, test, vi } from 'vitest'
 import App from './App'
@@ -142,7 +142,8 @@ test('キャンセル・Esc・窓の外では、変更を捨てて閉じる', as
 
   await user.click(screen.getByRole('button', { name: /牛乳を買う/ }))
   await user.type(screen.getByLabelText('タイトル'), ' 変更3')
-  await user.pointer({ keys: '[MouseLeft]', target: screen.getByRole('dialog').parentElement! })
+  // 暗い背景を押すと、<dialog> 自身が押されたことになる
+  await user.pointer({ keys: '[MouseLeft]', target: screen.getByRole('dialog') })
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 
   expect(putCalls(fn)).toHaveLength(0)
@@ -252,4 +253,60 @@ test('削除している間は、ボタンが押せず、Esc でも閉じない'
 
   finish({ ok: true, status: 204 } as Response)
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+})
+
+// ---------- <dialog> として開く（品質チェック F1） ----------
+
+test('<dialog> として、showModal() で開く（後ろの画面の操作を止め、フォーカスを閉じ込めるため）', async () => {
+  const showModal = vi.spyOn(HTMLDialogElement.prototype, 'showModal')
+  await openMilkCard()
+
+  const dialog = screen.getByRole('dialog')
+  expect(dialog.tagName).toBe('DIALOG')
+  expect(dialog).toHaveAttribute('open')
+  expect(showModal).toHaveBeenCalledTimes(1)
+  showModal.mockRestore()
+})
+
+test('閉じると、フォーカスが、押したカードに戻る（Esc でも、キャンセルでも）', async () => {
+  const { user } = await openMilkCard()
+  const card = screen.getByRole('button', { name: /牛乳を買う/ })
+
+  await user.keyboard('{Escape}')
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  expect(card).toHaveFocus()
+
+  await user.click(card)
+  await user.click(screen.getByRole('button', { name: 'キャンセル' }))
+  expect(card).toHaveFocus()
+})
+
+test('窓の中を押しても、閉じない', async () => {
+  const { user } = await openMilkCard()
+
+  await user.pointer({ keys: '[MouseLeft]', target: screen.getByRole('heading', { name: 'カードを編集' }) })
+
+  expect(screen.getByRole('dialog')).toBeInTheDocument()
+})
+
+test('ブラウザの都合で、窓が閉じられてしまったら、開き直す', async () => {
+  await openMilkCard()
+  const dialog = screen.getByRole('dialog')
+
+  dialog.removeAttribute('open') // ブラウザが、Esc を続けて押されて、強制的に閉じた状態
+  fireEvent(dialog, new Event('close'))
+
+  expect(dialog).toHaveAttribute('open')
+})
+
+test('期限のカレンダーは、モーダルの中に出る（外に出ると、押せなくなるため）。Esc では、カレンダーだけが閉じる', async () => {
+  const { user } = await openMilkCard()
+
+  await user.click(screen.getByRole('button', { name: /^期限/ }))
+  const calendar = screen.getByRole('dialog', { name: '期限日を選ぶ' })
+  expect(screen.getByRole('dialog', { name: 'カードを編集' })).toContainElement(calendar)
+
+  await user.keyboard('{Escape}')
+  expect(screen.queryByRole('dialog', { name: '期限日を選ぶ' })).not.toBeInTheDocument()
+  expect(screen.getByRole('dialog', { name: 'カードを編集' })).toBeInTheDocument()
 })

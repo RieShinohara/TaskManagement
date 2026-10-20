@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { ModalDialog } from './ModalDialog'
 
 export type DialogButton = {
   label: string
@@ -23,49 +23,33 @@ const TONE_CLASS = {
 
 // 画面の中央に出す、小さな確認・お知らせの窓（メッセージと、いくつかのボタン）
 export function ConfirmDialog({ title, message, buttons, busy = false, onClose }: Props) {
-  // Esc キーで閉じる（通信中は閉じない）
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape' && !busy) onClose()
-    }
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [busy, onClose])
-
   return (
-    // 窓の外（暗い部分）を押したら閉じる
-    // oxlint-disable-next-line jsx-a11y/no-static-element-interactions -- 外側を押して閉じるのはマウス向けの補助。キーボードは Esc で閉じる
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget && !busy) onClose()
+    <ModalDialog
+      role="alertdialog"
+      label={title}
+      describedBy="confirm-dialog-message"
+      className="w-full max-w-sm"
+      onDismiss={() => {
+        if (!busy) onClose() // 通信中は閉じない
       }}
     >
-      <div
-        role="alertdialog"
-        aria-modal="true"
-        aria-label={title}
-        aria-describedby="confirm-dialog-message"
-        className="w-full max-w-sm rounded-xl bg-white p-5 shadow-xl"
-      >
-        <p id="confirm-dialog-message" className="text-gray-800">
-          {message}
-        </p>
-        <div className="mt-5 flex justify-end gap-2">
-          {buttons.map((button) => (
-            <button
-              key={button.label}
-              type="button"
-              autoFocus={button.autoFocus}
-              onClick={button.onClick}
-              disabled={busy}
-              className={`rounded border px-4 py-1.5 disabled:cursor-not-allowed disabled:opacity-50 ${TONE_CLASS[button.tone ?? 'default']}`}
-            >
-              {button.label}
-            </button>
-          ))}
-        </div>
+      <p id="confirm-dialog-message" className="text-gray-800">
+        {message}
+      </p>
+      <div className="mt-5 flex justify-end gap-2">
+        {buttons.map((button) => (
+          <button
+            key={button.label}
+            type="button"
+            autoFocus={button.autoFocus}
+            onClick={button.onClick}
+            disabled={busy}
+            className={`rounded border px-4 py-1.5 disabled:cursor-not-allowed disabled:opacity-50 ${TONE_CLASS[button.tone ?? 'default']}`}
+          >
+            {button.label}
+          </button>
+        ))}
       </div>
-    </div>
+    </ModalDialog>
   )
 }

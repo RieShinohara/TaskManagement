@@ -19,7 +19,7 @@
 lint で見つかった違反 13 件（すべて `jsx-a11y`）の扱い：
 - 窓の外を押して閉じる処理など、意図のある 4 か所：理由を書いて、その行だけ除外した（`CardModal`、`ConfirmDialog`、`CardComposer`、`Calendar`）
 - `no-autofocus`：モーダルや入力欄の最初のフォーカスのために使っているので、規則を外した
-- `prefer-tag-over-role`：`role="dialog"` を `<dialog>` に置き換える指摘。置き換えは挙動が変わるので、F1 として別に扱う
+- `prefer-tag-over-role`：`role="dialog"` を `<dialog>` に置き換える指摘。置き換えは挙動が変わるので、F1 として別に扱った（F1 は対応済み。この規則は、期限のカレンダーなど、モーダルでない窓にも当たるので、外したままにしている）
 
 SpotBugs の `EI_EXPOSE_REP` / `EI_EXPOSE_REP2`（9 件）：リストを持つ record と、Spring が部品を渡す仕組み（DI）への、定番の誤検知なので、理由を書いて除外した（`backend/config/spotbugs/exclude.xml`）。
 
@@ -48,7 +48,7 @@ SpotBugs の `EI_EXPOSE_REP` / `EI_EXPOSE_REP2`（9 件）：リストを持つ 
 ### 2.2 フロントエンド
 | ID | 重大度 | 場所 | 指摘 | 推奨 | 判断 |
 |---|---|---|---|---|---|
-| F1 | 高〜中 | `CardModal.tsx`、`ConfirmDialog.tsx` | `aria-modal="true"` だが、フォーカスが窓の中に閉じ込められておらず（Tab で外に出られる）、閉じたあとにフォーカスが元に戻らない | ネイティブの `<dialog>` と `showModal()` に置き換える（標準のやり方）。F1 を直すと、lint の除外コメント 2 つも不要になる | |
+| F1 | 高〜中 | `CardModal.tsx`、`ConfirmDialog.tsx` | `aria-modal="true"` だが、フォーカスが窓の中に閉じ込められておらず、閉じたあとにフォーカスが元に戻らなかった。閉じたあと Tab を押すと、ブラウザの部品（タブ検索）に飛ぶことを、動かして確かめた | ネイティブの `<dialog>` と `showModal()` に置き換える | 対応済み（Issue #86）。共通部品 `ModalDialog` を作り、ブラウザで、閉じ込めと復帰を確かめた |
 | F2 | （再現せず） | `CardComposer.tsx`（`handleBlur`） | 「キーボードで期限のカレンダーに Tab で移ると、誤って確定する」という指摘だったが、**再現しなかった**（Issue #81）。カレンダーは画面の末尾に描かれるので、Tab で進むと、カレンダーではなく、欄の外の部品に移る。欄の外に出たので、確定するのは、設計どおり。マウスで日付を選ぶ操作も、確定しない | 動きを固定するテストを追加した（`CardComposer.test.tsx`）。本当の問題は、カレンダーにキーボードで入れないこと（F6） | 対応済み（調査のみ） |
 | F3 | 中 | `api/client.ts` | 通信を中断できない（`AbortSignal` なし）。404 と 400 の文言が、どの操作でも同じ（例：期限順の 404 でも「カードが見つかりません」）。サーバーが HTML を 200 で返したときの、JSON の読み取りの失敗を処理していない。画面全体の ErrorBoundary もない | `AbortController`、操作ごとの文言、JSON の失敗の処理、ErrorBoundary | |
 | F4 | 中 | `useSettings.ts`、`Board.tsx` | 素早い連続操作（背景を続けて選ぶ、連続でドラッグ）で、失敗したときの「元に戻す」が、あとの操作の結果を消すことがある | 保存中は次の操作を待たせる、または順番に処理する | |

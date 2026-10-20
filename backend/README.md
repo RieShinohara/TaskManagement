@@ -154,7 +154,8 @@ Invoke-WebRequest http://localhost:8080/api/background-images/sky -OutFile got.j
 Invoke-RestMethod http://localhost:8080/api/background-images/sky -Method Delete
 ```
 - 割り当て先（`{slot}`）ごとに、最大1枚。登録済みの割り当て先に登録すると、置き換わる。`sky` / `sunset` / `night` 以外は `404`
-- 登録できるのは、**JPEG（先頭が FF D8 FF）で、5MB以下**。違うもの・空は `400`（登録されず、すでにある画像も変わらない）。画面が、横1920pxのJPEGに縮小してから送る
+- 登録できるのは、**JPEG（先頭が FF D8 FF）で、5MB以下**。違うもの・空は `400`、5MBを超えるものは `413`（どちらも登録されず、すでにある画像も変わらない）。画面が、横1920pxのJPEGに縮小してから送る
+- **大きすぎる本文は、全部を読み込む前に断る**：送られてくる大きさ（`Content-Length`）が5MBを超えていれば、本文を読まずに `413`。大きさを申告しない送り方でも、5MBより1バイト多く読んだところで、読むのをやめて `413`（巨大な本文で、サーバーのメモリを使い切らないため）
 - 画像は、DBに入る（bytea）。登録（置き換え）の日時（`updatedAt`）が、画像の ETag になり、変わっていなければ `304`（送り直さない）
 - 一覧（`GET /api/background-images`）は、`[{"slot":"sky","updatedAt":"…"}]` の形で、画像のデータは入らない
 - **バックアップには入らない**。バックアップを読み込んでも、登録済みの画像はそのまま残る

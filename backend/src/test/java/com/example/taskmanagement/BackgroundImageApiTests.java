@@ -183,13 +183,13 @@ class BackgroundImageApiTests {
 	}
 
 	@Test
-	void 大きさは_5MBちょうどまで登録でき_1バイトでも超えると400() throws Exception {
+	void 大きさは_5MBちょうどまで登録でき_1バイトでも超えると413() throws Exception {
 		int limit = 5 * 1024 * 1024;
 
 		register("sky", withJpegMark(limit)).andExpect(status().isOk());
 		assertThat(bytes("sky")).hasSize(limit);
 
-		register("night", withJpegMark(limit + 1)).andExpect(status().isBadRequest());
+		register("night", withJpegMark(limit + 1)).andExpect(status().isContentTooLarge());
 		assertThat(imageRepository.existsById("night")).isFalse();
 	}
 

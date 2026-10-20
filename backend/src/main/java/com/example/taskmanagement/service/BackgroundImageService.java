@@ -72,7 +72,7 @@ public class BackgroundImageService {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "JPEGの画像ではありません");
 		}
 		if (image.length > MAX_BYTES) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "画像が大きすぎます（5MBまで）");
+			throw new ResponseStatusException(HttpStatus.CONTENT_TOO_LARGE, "画像が大きすぎます（5MBまで）");
 		}
 	}
 

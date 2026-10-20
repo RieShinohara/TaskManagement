@@ -2,6 +2,9 @@ plugins {
 	id 'java'
 	id 'org.springframework.boot' version '4.1.1'
 	id 'io.spring.dependency-management' version '1.1.7'
+	id 'jacoco'
+	id 'checkstyle'
+	id 'com.github.spotbugs' version '6.5.13'
 }
 
 group = 'com.example'
@@ -33,4 +36,28 @@ dependencies {
 
 tasks.named('test') {
 	useJUnitPlatform()
+	finalizedBy 'jacocoTestReport'
+}
+
+// テストで、どのコードが実行されたか（カバレッジ）を測る。数値の下限は、まだ決めない（測るだけ）
+jacoco {
+	toolVersion = '0.8.15'
+}
+
+// 書き方のチェック。規則は config/checkstyle/checkstyle.xml。違反が1つでもあれば失敗にする
+checkstyle {
+	toolVersion = '14.3.0'
+	maxWarnings = 0
+}
+
+// バグになりやすい書き方のチェック。除外は config/spotbugs/exclude.xml
+spotbugs {
+	toolVersion = '4.10.5'
+	excludeFilter = file('config/spotbugs/exclude.xml')
+}
+
+tasks.withType(com.github.spotbugs.snom.SpotBugsTask).configureEach {
+	reports {
+		html.required = true
+	}
 }

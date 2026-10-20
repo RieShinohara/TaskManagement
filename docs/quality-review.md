@@ -13,6 +13,7 @@
 | 画面の lint を強化 | oxlint に `jsx-a11y`（アクセシビリティ）を追加。`correctness` 系を error、`react/exhaustive-deps` を有効、`--deny-warnings` で警告も失敗にした。`tsconfig` の `strict` を明示した |
 | サーバーの静的解析を導入 | Checkstyle、SpotBugs、JaCoCo を導入し、`.\gradlew.bat check` で実行できるようにした（Java 25 で動くことを確認） |
 | 文書を実装に合わせた | 検索機能の追記、「未実装」「未決定」のままの記述の更新、画面の記述の修正など |
+| 手順のスキル化 | この品質チェックの手順を、プロジェクト用のスキル `quality-check`（`.claude/skills/quality-check/SKILL.md`）にした。次の点検は、「品質チェックをして」と頼むと、同じ手順で進められる |
 | 動かして確かめたこと | `npm run lint`（警告 0）、`npm test`（154 件）、`npm run build`、`.\gradlew.bat check`（成功。命令数のカバレッジは約 99%） |
 
 lint で見つかった違反 13 件（すべて `jsx-a11y`）の扱い：

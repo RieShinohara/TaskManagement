@@ -60,6 +60,7 @@ export function CardComposer({ columnId, onCreated, onClose }: Props) {
   }
 
   return (
+    // oxlint-disable-next-line jsx-a11y/no-static-element-interactions -- 入力欄の外に出たかの判定と、Esc の受け取りを、まとめて包む要素で行う
     <div onBlur={handleBlur} onKeyDown={handleContainerKeyDown} className={`${CARD_BG[color]} rounded-lg p-3 shadow-md`}>
       <input
         autoFocus

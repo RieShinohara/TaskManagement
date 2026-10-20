@@ -37,10 +37,12 @@
 | Spring Bootのバージョン | **4.1.1**（確定：2026-10-12） | 現行の最新安定版。Java 25 に対応 |
 | ビルド・依存管理（サーバー側） | Gradle 9.8.1（プロジェクトに同梱の Gradle Wrapper で実行） | 講義の表でも推奨として挙げられており、講義の説明をそのまま参考にできる。講義では「各自の推奨でよい」とされている |
 | データベースへの接続 | Spring Data JPA ＋ PostgreSQLドライバ | SQLを直接書かずに、Javaのクラスでデータを扱える |
+| 入力の検査（サーバー側） | Spring Boot の validation（Bean Validation） | タイトルの長さや色などを、APIの入口で検査する |
 | データベースの構造の管理 | 当面は JPA の `ddl-auto: update`（講義と同じ）。将来 Flyway を検討 | Entity（Javaのクラス）からテーブルを自動で作る。Flyway は、テーブル定義をファイルとして記録・再現できる |
 | Node.js | **24 LTS（24.20.0）**（確定：2026-10-15） | 画面側の開発に必要。Node 26 は 2026-10-28 に LTS 入り予定だが、今は 24 が現役のLTS |
 | 画面側のバージョン | **React 19.3.1、TypeScript 7.0.2、Vite 8.3.4、Tailwind CSS 4.3.3、Vitest 5.0.4**（確定：2026-10-15。すべてその時点の最新版） | `npm create vite` のテンプレートは TypeScript 6.0 だったが、7.0.2 に上げて、ビルド・テストが通ることを確認した |
-| 画面側の静的チェック | oxlint（Vite のテンプレートの標準） | ESLint ではなく、テンプレートの標準に合わせた |
+| 画面側の静的チェック | oxlint（Vite のテンプレートの標準）。アクセシビリティ（jsx-a11y）と、警告を許さない設定（`--deny-warnings`）を追加（2026-10-21） | ESLint ではなく、テンプレートの標準に合わせた |
+| サーバー側の静的チェック | Checkstyle（書き方）、SpotBugs（バグになりやすい書き方）、JaCoCo（テストのカバレッジ）。`gradlew check` で実行（2026-10-21） | 規則は `backend/config/` に置く。Java 25 で動くことを確認した |
 | 画面からAPIへの接続 | 開発中は Vite のプロキシ（`/api` → `localhost:8080`） | CORS の設定が要らず、バックエンドを変えずに済む |
 | 開発用のPostgreSQL | **Docker（Docker Desktop）で起動。PostgreSQL 18**（確定：2026-10-13） | Windowsを汚さず、起動・停止・削除が1行でできる |
 | テスト | JUnit ＋ Testcontainers（サーバー側）、Vitest（画面側） | テストのときだけ、使い捨てのPostgreSQLをDockerで起動する |
@@ -48,14 +50,15 @@
 ## 4. 未決定の項目
 - 上の「案」の最終確認（バージョンを含む）
 - テーブルの作り方の見直し（現在は講義に合わせて JPA の自動作成 `ddl-auto: update`。テーブル定義を記録に残したくなったら Flyway を導入する）
-- 開発環境の構築手順
+- アイコンの部品：使わないことにした。必要なアイコンは、自前のSVGで描く
+- 品質チェックで挙がった改善の優先度（[品質チェックの記録](quality-review.md) を参照）
 
 ## 5. 現在の開発環境
 - 利用している道具：Cursor、Claude Code、Git / GitHub
 - Java 25（Eclipse Temurin、winget でインストール）：導入済み（2026-10-12）
 - Gradle：インストール不要（`backend/` の Gradle Wrapper が自動で取得する）
-- バックエンド：`backend/` に作成済み。列・カードのAPI（列の一覧、カードの追加・一覧）が動作確認済み（2026-10-13。使い方は [backend/README.md](../backend/README.md)）
+- バックエンド：`backend/` に作成済み。列・カード・移動・期限順・検索・バックアップ・設定・背景画像のAPIが、すべて実装済み（使い方は [backend/README.md](../backend/README.md)）
 - PostgreSQL 18：Docker で起動できる状態（`docker-compose.yml`）。SQLの確認（INSERT / SELECT / DELETE）と、バックエンドからの接続は確認済み（2026-10-13）
 - Docker Desktop：導入済み
 - Node.js 24 LTS（winget でインストール）：導入済み（2026-10-15）
-- フロントエンド：`frontend/` に環境を作成済み（Vite + React + TypeScript + Tailwind CSS + Vitest。使い方は [frontend/README.md](../frontend/README.md)）。検索結果を3列のボード画面に表示するところまで動作確認済み（2026-10-15）
+- フロントエンド：`frontend/` に環境を作成済み（Vite + React + TypeScript + Tailwind CSS + Vitest。使い方は [frontend/README.md](../frontend/README.md)）。計画した画面の機能（カードの追加・編集・削除、ドラッグ＆ドロップ、期限順、検索、バックアップ、背景）は、すべて実装済み。開発環境の構築手順は、[README.md](../README.md) にある

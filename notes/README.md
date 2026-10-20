@@ -10,6 +10,7 @@ AIエンジニア養成コースの学習記録です。Claude Codeと一緒に�
 | [04-glossary.md](04-glossary.md) | 用語集 |
 | [05-backend-guide.md](05-backend-guide.md) | バックエンド（Java + Spring Boot、PostgreSQL、Docker）の仕組みと、動かし方。機能ごとのAPIの作り方 |
 | [06-frontend-guide.md](06-frontend-guide.md) | フロントエンド（React + TypeScript + Vite）の仕組みと、画面がデータを表示するまでの流れ。機能ごとの画面の作り方 |
+| [07-quality-check.md](07-quality-check.md) | 品質チェック：静的チェック（lint）の道具と考え方。機能が完成したあとの点検の進め方 |
 
 ## 読む順番のおすすめ
 1. [01](01-git-and-github.md)：作業の進め方（Issue → ブランチ → PR）。これを守って、すべて作った
@@ -17,7 +18,8 @@ AIエンジニア養成コースの学習記録です。Claude Codeと一緒に�
 3. [05](05-backend-guide.md) の1〜11章：バックエンドの土台（API、DB、層、テスト）
 4. [06](06-frontend-guide.md) の1〜5章：画面の土台（React、プロキシ、フォルダの構成）
 5. 機能ごとの章（下の対応表）。**同じ機能の、バックエンドと画面を、続けて読むと分かりやすい**
-6. 分からない言葉は、[用語集](04-glossary.md)
+6. 機能がそろったあとの点検は、[07](07-quality-check.md)
+7. 分からない言葉は、[用語集](04-glossary.md)
 
 ## 機能と章の対応表
 機能は、「バックエンドのAPI」→「画面」の順に作った。章の番号は、それぞれのノートの章。

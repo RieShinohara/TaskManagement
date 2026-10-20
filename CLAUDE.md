@@ -74,7 +74,7 @@ Refs #23
 - **変更は、必ず PR で、main に入れる。** PR は、`gh pr create` で作る
 - タイトル：日本語。何をしたかが分かるように書く
 - 本文に、次を書く：`## 内容`、`## 確認したこと`（実行したテストや、動作確認の結果）、**`Closes #Issue番号`**
-- PR を作る前に、**テスト・静的チェック・ビルドを実行**し、結果を `## 確認したこと` に書く（バックエンド：`.\gradlew.bat test`、画面：`npm test` ／ `npm run lint` ／ `npm run build`。文書だけの PR は、リンク切れなどの確認）
+- PR を作る前に、**テスト・静的チェック・ビルドを実行**し、結果を `## 確認したこと` に書く（バックエンド：`.\gradlew.bat check`（テストと静的チェック）、画面：`npm test` ／ `npm run lint` ／ `npm run build`。文書だけの PR は、リンク切れなどの確認）
 - ブラウザで見ないと分からないこと（見た目、ファイルの保存・選択など）は、「**ユーザーの確認が必要**」と、PRの本文に書く。Claude Code が確かめていないことを、確認済みと書かない
 - 本文の最後に、システムから指示された `Generated with Claude Code` の行を付ける
 - **PRのマージと、ブランチの削除は、ユーザーが行う。** Claude Code は、マージしない
@@ -111,6 +111,7 @@ Refs #23
 | DBを停止（データは残る） | `docker compose down` | リポジトリ直下 |
 | バックエンドを起動 | `.\gradlew.bat bootRun` | `backend/` |
 | テスト | `.\gradlew.bat test` | `backend/`（Docker Desktop が必要） |
+| テスト＋静的チェック（Checkstyle・SpotBugs・JaCoCo） | `.\gradlew.bat check` | `backend/`（Docker Desktop が必要） |
 | 画面を起動（http://localhost:5173） | `npm run dev` | `frontend/`（データを見るには、DBとバックエンドも起動） |
 | 画面のテスト／静的チェック／ビルド | `npm test` ／ `npm run lint` ／ `npm run build` | `frontend/` |
 

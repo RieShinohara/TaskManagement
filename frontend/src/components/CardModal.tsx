@@ -98,6 +98,7 @@ export function CardModal({ card, onSaved, onClose }: Props) {
 
   return (
     // 窓の外（暗い部分）を押したら、変更を捨てて閉じる
+    // oxlint-disable-next-line jsx-a11y/no-static-element-interactions -- 外側を押して閉じるのはマウス向けの補助。キーボードは Esc で閉じる
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
       onMouseDown={(e) => {

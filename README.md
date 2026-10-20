@@ -37,7 +37,7 @@ AIエンジニア養成コースの初級課題として、開発するリポジ
 ## フォルダの構成
 | フォルダ | 内容 |
 |---|---|
-| [docs/](docs/) | 要件定義（入口は [requirements.md](docs/requirements.md)） |
+| [docs/](docs/) | 要件定義（入口は [requirements.md](docs/requirements.md)）と、[品質チェックの記録](docs/quality-review.md) |
 | [backend/](backend/) | 本番のサーバー（API）。使い方は [backend/README.md](backend/README.md) |
 | [frontend/](frontend/) | 本番の画面。使い方は [frontend/README.md](frontend/README.md) |
 | [prototype/](prototype/) | 要件を動かして確認するための、使い捨ての試作。`prototype/index.html` をChromeで開くと動かせる |
@@ -59,7 +59,8 @@ AIエンジニア養成コースの初級課題として、開発するリポジ
 ### テストの実行
 | 対象 | コマンド | 場所 |
 |---|---|---|
-| サーバー | `.\gradlew.bat test`（Docker Desktop の起動が必要） | `backend/` |
+| サーバー（テスト） | `.\gradlew.bat test`（Docker Desktop の起動が必要） | `backend/` |
+| サーバー（テスト＋静的チェック） | `.\gradlew.bat check`（テスト、Checkstyle、SpotBugs、カバレッジの計測） | `backend/` |
 | 画面 | `npm test` | `frontend/` |
 | 画面の静的チェック／ビルド | `npm run lint` ／ `npm run build` | `frontend/` |
 

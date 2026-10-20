@@ -10,6 +10,7 @@
 | ビルドツール | Gradle 9.8.1（`gradlew` が自動で取得する） |
 | データベース接続 | Spring Data JPA ＋ PostgreSQL（Docker で起動） |
 | テスト | JUnit ＋ MockMvc ＋ Testcontainers（使い捨ての PostgreSQL） |
+| 静的チェック | Checkstyle（書き方）、SpotBugs（バグになりやすい書き方）、JaCoCo（カバレッジ）。規則は `config/` |
 
 ## 必要なもの
 - JDK 25（Gradle は別にインストールしなくてよい）
@@ -32,6 +33,7 @@
 |---|---|
 | サーバーを起動する | `.\gradlew.bat bootRun` |
 | テストを実行する | `.\gradlew.bat test`（Docker Desktop の起動が必要） |
+| テストと静的チェックをまとめて実行する | `.\gradlew.bat check`（テスト、Checkstyle、SpotBugs。カバレッジの結果は `build/reports/jacoco/test/html/index.html`） |
 | 止める | 起動したターミナルで `Ctrl + C` |
 
 起動後、ブラウザで <http://localhost:8080/api/health> を開き、`{"status":"ok"}` と表示されれば成功。
@@ -77,6 +79,7 @@
 | `DELETE /api/background-images/{slot}` | 登録した画像を消す（標準の画像に戻る）。成功は `204` |
 
 返事の番号は、成功が `200`（作ったときは `201`、中身のないときは `204`）、お願いの内容がおかしいと `400`、見つからないと `404`。
+エラーの本文の形は、Spring Boot の標準のまま（このアプリ独自の形は決めていない）。画面は、本文を読まず、番号で表示する文言を決めている。
 
 絞り込み（どれも省略できる。組み合わせられる）:
 
@@ -95,7 +98,7 @@ Invoke-RestMethod http://localhost:8080/api/cards -Method Post -ContentType "app
 ```
 - `title`（必須、255文字まで）、`columnId`（必須）、`color`（任意。none / red / blue / green / yellow / gray。省略すると none）、`dueDate`（任意）
 - 新しいカードは、その列の一番上に入る
-- タイトルが空・色が不正なら `400`、存在しない列なら `404`
+- タイトルが空・255文字を超える、`columnId` がない、色が不正、`dueDate` の形が不正（`YYYY-MM-DD` でない）、JSON がおかしい、なら `400`。存在しない列なら `404`
 
 カードの更新（PowerShell の例。日本語を送るときは、上の追加と同じく UTF-8 のバイト列にする）:
 ```powershell
@@ -166,7 +169,7 @@ Invoke-RestMethod http://localhost:8080/api/backup/restore -Method Post -Content
 ```
 - ファイルの形式は、[docs/data-design.md](../docs/data-design.md) の「バックアップファイルの形式」。列は左から順、カードは上から順に、入れ子で持つ（IDと `position` は入れない）
 - 読み込むと、今ある**カードと列は全部消えて**、ファイルの内容になる。IDは振り直され、`position` は 0 からの連番になる。**途中で失敗したら、全部取り消され、今のデータは変わらない**
-- 不正なファイル（`app` が `taskboard` でない、`version` が 1 でない、列がない、タイトルが空、色が不正、期限日が不正、カードが1万枚を超える、JSONでない、など）は `400`。成功は `204`（中身なし）
+- 不正なファイル（`app` が `taskboard` でない、`version` が 1 でない、列がない・51列以上、列の名前が空・255文字を超える、タイトルが空、説明文が2000文字を超える、色が不正、期限日が不正、カードが1万枚を超える、JSONでない、など）は `400`。成功は `204`（中身なし）
 - 背景の設定（`settings.background`）も入る。ファイルに `settings` がなければ（古いバックアップ）、背景は青空になる。自分の背景画像は、入らない
 - 知らない項目は、無視して読める
 - バックアップのファイルは、リポジトリに入れない（公開リポジトリなので、個人の予定が入るおそれがある）
@@ -198,10 +201,11 @@ docker compose exec db psql -U taskmanagement -d taskmanagement -f /tmp/sample-d
 backend/
 ├── build.gradle        ビルドの設定（使う部品、Javaのバージョンなど）
 ├── settings.gradle     プロジェクト名
+├── config/             静的チェックの規則（checkstyle / spotbugs）
 ├── sql/                サンプルデータのSQL
 ├── gradlew.bat など    Gradle Wrapper（Gradleを自動で用意する仕組み）
 └── src/
-    ├── main/java/…     プログラム本体
+    ├── main/java/…     プログラム本体（起動時に列を用意する DataInitializer、動作確認の HealthController、controller/ service/ など）
     ├── main/resources/ 設定ファイル（application.yml）
     └── test/java/…     テスト
 ```

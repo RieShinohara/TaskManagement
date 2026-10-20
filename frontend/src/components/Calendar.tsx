@@ -37,6 +37,7 @@ export function Calendar({ value, today, onSelect, onClear, onEscape }: Props) {
   const navButton = 'rounded px-2 py-1 text-gray-600 hover:bg-gray-100'
 
   return (
+    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- 中を押しても、入力欄などからフォーカスを奪わないための処理
     <div
       role="dialog"
       aria-label="期限日を選ぶ"

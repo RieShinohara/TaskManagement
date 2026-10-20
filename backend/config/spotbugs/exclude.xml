@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SpotBugs の除外。理由を書いたものだけを、ここに足す -->
+<FindBugsFilter>
+  <!--
+    EI_EXPOSE_REP / EI_EXPOSE_REP2（内部の可変オブジェクトを外に渡す）。
+    - record（DTO）が、リストを持ち、そのまま返すのは、Spring + Jackson では普通の作り
+    - Controller / Service が、Spring から渡された部品（Service や Repository）を持つのは、依存性の注入（DI）そのもの
+    - Entity の画像（byte[]）は、JPA が読み書きするための項目
+    いずれも、外から書き換えられる心配のない使い方なので、除外する。
+  -->
+  <Match>
+    <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+  </Match>
+</FindBugsFilter>

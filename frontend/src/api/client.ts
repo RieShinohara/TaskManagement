@@ -14,8 +14,9 @@ import type {
 const CONNECTION_ERROR = 'サーバーに接続できません。バックエンドとDBが起動しているか確認してください。'
 
 // 通信の共通部分。開発中は、Vite のプロキシが /api をバックエンド（8080番）に中継する
-// badRequestMessage：400 のときに出す文（省略すると、カードの入力についての文）
-async function request<T>(url: string, init?: RequestInit, badRequestMessage?: string): Promise<T> {
+// rejectedMessage：サーバーに「お願いの内容がだめ」と断られたとき（400、または 413＝大きすぎる）に出す文。
+// 省略すると、400 は、カードの入力についての文になる（413 は、専用の文がないので、番号つきの一般的なエラー）
+async function request<T>(url: string, init?: RequestInit, rejectedMessage?: string): Promise<T> {
   let response: Response
   try {
     response = init ? await fetch(url, init) : await fetch(url)
@@ -25,9 +26,9 @@ async function request<T>(url: string, init?: RequestInit, badRequestMessage?: s
   if (!response.ok) {
     // バックエンドが止まっているとき、プロキシは 502 などを返す
     if ([502, 503, 504].includes(response.status)) throw new Error(CONNECTION_ERROR)
-    if (response.status === 400)
+    if (response.status === 400 || (response.status === 413 && rejectedMessage))
       throw new Error(
-        badRequestMessage ?? '入力内容を確認してください（タイトルは必須で255文字まで、説明文は2000文字までです）',
+        rejectedMessage ?? '入力内容を確認してください（タイトルは必須で255文字まで、説明文は2000文字までです）',
       )
     if (response.status === 404) throw new Error('カードが見つかりません。画面を読み込み直してください。')
     throw new Error(`サーバーからエラーが返りました（${response.status}）`)

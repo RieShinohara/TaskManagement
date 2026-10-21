@@ -183,3 +183,52 @@ test('「クリア」を押すと、お知らせが消えて、カードを動�
   await screen.findByRole('region', { name: 'ToDo' })
   expect(screen.getByRole('button', { name: /部屋の掃除/ })).toHaveAttribute('aria-roledescription')
 })
+
+// ---------- ドロップ先を示す青い線（設計書：ドロップ先は、青い線で示す） ----------
+
+const indicatorsIn = (name: string) =>
+  within(screen.getByRole('region', { name })).queryAllByTestId('drop-indicator').length
+
+test('つかんでいる間だけ、いま落とす場所のある列に、青い線が1本出る', async () => {
+  const { user } = await setup()
+  expect(indicatorsIn('ToDo') + indicatorsIn('作業中') + indicatorsIn('完了')).toBe(0)
+
+  screen.getByRole('button', { name: /部屋の掃除/ }).focus()
+  await user.keyboard(' ') // つかむ
+  expect(indicatorsIn('ToDo')).toBe(1)
+  expect(indicatorsIn('作業中')).toBe(0)
+
+  await user.keyboard('{ArrowRight}') // 隣の列へ
+  await waitFor(() => expect(indicatorsIn('作業中')).toBe(1))
+  expect(indicatorsIn('ToDo')).toBe(0)
+
+  await user.keyboard(' ') // 置く
+  await waitFor(() => expect(indicatorsIn('作業中')).toBe(0))
+  expect(indicatorsIn('ToDo') + indicatorsIn('完了')).toBe(0)
+})
+
+test('Esc で取り消すと、青い線が消える', async () => {
+  const { fn, user } = await setup()
+
+  screen.getByRole('button', { name: /部屋の掃除/ }).focus()
+  await user.keyboard(' ')
+  await user.keyboard('{ArrowDown}')
+  expect(indicatorsIn('ToDo')).toBe(1)
+
+  await user.keyboard('{Escape}')
+  expect(indicatorsIn('ToDo')).toBe(0)
+  expect(moveCalls(fn)).toHaveLength(0)
+})
+
+test('絞り込み中は、カードをつかめないので、青い線も出ない', async () => {
+  const { user } = await setup()
+  await user.type(screen.getByLabelText('キーワード'), '掃除')
+  await user.click(screen.getByRole('button', { name: '検索' }))
+  await screen.findByText(BANNER)
+
+  screen.getByRole('button', { name: /部屋の掃除/ }).focus()
+  await user.keyboard(' ')
+  await user.keyboard('{ArrowDown}')
+
+  expect(indicatorsIn('ToDo')).toBe(0)
+})

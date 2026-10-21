@@ -56,8 +56,16 @@ export function CardItem({ card, today, overdue, onOpen, dragDisabled }: Props) 
       ref={setNodeRef}
       style={{ transform: CSS.Translate.toString(transform), transition }}
       // ドラッグ中、元の場所に残るカードは半透明にする（持ち上げたカードは、DragOverlay が別に描く）
-      className={`${CARD_BG[card.color] ?? CARD_BG.none} rounded-lg shadow-sm transition hover:shadow-md ${isDragging ? 'opacity-40' : ''}`}
+      className={`${CARD_BG[card.color] ?? CARD_BG.none} relative rounded-lg shadow-sm transition hover:shadow-md ${isDragging ? 'opacity-40' : ''}`}
     >
+      {isDragging && (
+        // 落とす場所を示す青い線。元の場所のカード（いまの落とし先の場所に、動いてくる）の、上のすき間に出す
+        <span
+          aria-hidden="true"
+          data-testid="drop-indicator"
+          className="pointer-events-none absolute inset-x-0 -top-[5.5px] h-[3px] rounded-full bg-blue-500"
+        />
+      )}
       <button
         type="button"
         onClick={() => onOpen(card)}

@@ -211,9 +211,11 @@ test('画像の登録で 400 が返ったときは、登録できなかったと
   await expect(uploadBackgroundImage('sky', new Blob(['x']))).rejects.toThrow('画像を登録できませんでした')
 })
 
-test('画像の登録で 413（大きすぎる）が返ったときも、登録できなかったと伝える', async () => {
+test('画像の登録で 413（大きすぎる）が返ったときは、ファイルサイズが大きいという理由と、対処を伝える', async () => {
   stubFetch({ ok: false, status: 413 })
-  await expect(uploadBackgroundImage('sky', new Blob(['x']))).rejects.toThrow('画像を登録できませんでした')
+  await expect(uploadBackgroundImage('sky', new Blob(['x']))).rejects.toThrow(
+    '画像のファイルサイズが大きすぎて、登録できませんでした（5MBまで）。画像を圧縮するか、別の画像を選んでください。',
+  )
 })
 
 test('413 は、登録のように、専用の文を決めていない通信では、番号つきの一般的なエラーにする', async () => {

@@ -46,7 +46,9 @@ test('設定済みの期限は「期限 ○月○日」。カレンダーは、�
 
   const calendar = screen.getByRole('dialog', { name: '期限日を選ぶ' })
   expect(within(calendar).getByText('2027年1月')).toBeInTheDocument()
-  expect(within(calendar).getByRole('button', { name: '2027年1月15日' })).toHaveAttribute('aria-pressed', 'true')
+  expect(within(calendar).getByRole('gridcell', { selected: true })).toContainElement(
+    within(calendar).getByRole('button', { name: '2027年1月15日' }),
+  )
 })
 
 test('日付を押すと、すぐに選ばれてカレンダーが閉じる', async () => {
@@ -230,4 +232,137 @@ test('モーダルでカレンダーを開いて Esc を押すと、カレンダ
   await user.keyboard('{Escape}')
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   vi.unstubAllGlobals()
+})
+
+// ---------- キーボードだけで使える（品質チェック F6。WAI-ARIA の日付ピッカーの作り方） ----------
+
+const focusedDay = () => document.activeElement?.getAttribute('aria-label')
+const triggerButton = () => screen.getByRole('button', { name: /^期限/ })
+
+async function openByKeyboard(user: ReturnType<typeof userEvent.setup>) {
+  triggerButton().focus()
+  await user.keyboard('{Enter}')
+}
+
+test('Enter で開くと、フォーカスが、選択中の日付に移る（未設定なら、今日）', async () => {
+  const user = userEvent.setup()
+  const { unmount } = render(<Harness initial="2027-01-15" />)
+  await openByKeyboard(user)
+  expect(screen.getByRole('dialog', { name: '期限日を選ぶ' })).toBeInTheDocument()
+  expect(focusedDay()).toBe('2027年1月15日')
+  unmount()
+
+  render(<Harness />)
+  await openByKeyboard(user)
+  expect(focusedDay()).toBe('2026年10月15日')
+})
+
+test('矢印キーで、1日・1週間ずつ動き、Home / End で、週の初め・終わりに動く', async () => {
+  const user = userEvent.setup()
+  render(<Harness />) // 今日は 2026年10月15日（木）
+  await openByKeyboard(user)
+
+  await user.keyboard('{ArrowRight}')
+  expect(focusedDay()).toBe('2026年10月16日')
+  await user.keyboard('{ArrowDown}')
+  expect(focusedDay()).toBe('2026年10月23日')
+  await user.keyboard('{ArrowLeft}')
+  expect(focusedDay()).toBe('2026年10月22日')
+  await user.keyboard('{ArrowUp}')
+  expect(focusedDay()).toBe('2026年10月15日')
+  await user.keyboard('{Home}')
+  expect(focusedDay()).toBe('2026年10月11日') // 日曜
+  await user.keyboard('{End}')
+  expect(focusedDay()).toBe('2026年10月17日') // 土曜
+})
+
+test('月の端を越えて動くと、表示する月も変わる。PageUp / PageDown で、月ごとに動く', async () => {
+  const user = userEvent.setup()
+  render(<Harness initial="2026-10-31" />)
+  await openByKeyboard(user)
+  const calendar = screen.getByRole('dialog', { name: '期限日を選ぶ' })
+  expect(within(calendar).getByText('2026年10月')).toBeInTheDocument()
+
+  await user.keyboard('{ArrowRight}') // 11月1日
+  expect(focusedDay()).toBe('2026年11月1日')
+  expect(within(calendar).getByText('2026年11月')).toBeInTheDocument()
+
+  await user.keyboard('{PageUp}') // 前の月の、同じ日
+  expect(focusedDay()).toBe('2026年10月1日')
+  await user.keyboard('{PageDown}{PageDown}')
+  expect(focusedDay()).toBe('2026年12月1日')
+})
+
+test('Tab の止まる場所は、日付は、いまの1つだけ。カレンダーの中を回って、外には出ない', async () => {
+  const user = userEvent.setup()
+  render(
+    <div>
+      <Harness />
+      <button type="button">カレンダーの外のボタン</button>
+    </div>,
+  )
+  await openByKeyboard(user)
+  const calendar = screen.getByRole('dialog', { name: '期限日を選ぶ' })
+  const days = within(calendar).getAllByRole('button', { name: /^\d+年\d+月\d+日$/ })
+  expect(days.filter((day) => day.tabIndex === 0)).toHaveLength(1)
+
+  await user.tab() // 日付 → 「期限を外す」
+  expect(document.activeElement).toBe(within(calendar).getByRole('button', { name: '期限を外す' }))
+  await user.tab() // いちばん後ろから、いちばん前（「前の月」）に戻る
+  expect(document.activeElement).toBe(within(calendar).getByRole('button', { name: '前の月' }))
+  await user.tab({ shift: true }) // いちばん前から、いちばん後ろ（「期限を外す」）に戻る
+  expect(document.activeElement).toBe(within(calendar).getByRole('button', { name: '期限を外す' }))
+  expect(screen.getByRole('button', { name: 'カレンダーの外のボタン' })).not.toHaveFocus()
+})
+
+test('Enter か Space で日付を選ぶと、カレンダーが閉じて、フォーカスが、期限のボタンに戻る', async () => {
+  const user = userEvent.setup()
+  render(<Harness />)
+  await openByKeyboard(user)
+  await user.keyboard('{ArrowRight}{Enter}')
+
+  expect(screen.queryByRole('dialog', { name: '期限日を選ぶ' })).not.toBeInTheDocument()
+  expect(value()).toBe('2026-10-16')
+  expect(triggerButton()).toHaveFocus()
+
+  await user.keyboard('{Enter}') // 開き直す。選択中の 10/16 にフォーカス
+  expect(focusedDay()).toBe('2026年10月16日')
+  await user.keyboard('{ArrowDown} ') // Space で選ぶ
+  expect(value()).toBe('2026-10-23')
+  expect(triggerButton()).toHaveFocus()
+})
+
+test('Esc で閉じると、何も選ばず、フォーカスが、期限のボタンに戻る', async () => {
+  const user = userEvent.setup()
+  render(<Harness initial="2026-10-20" />)
+  await openByKeyboard(user)
+  await user.keyboard('{ArrowRight}{Escape}')
+
+  expect(screen.queryByRole('dialog', { name: '期限日を選ぶ' })).not.toBeInTheDocument()
+  expect(value()).toBe('2026-10-20')
+  expect(triggerButton()).toHaveFocus()
+})
+
+test('「期限を外す」も、キーボードで押せる。外したあと、フォーカスは、期限のボタンに戻る', async () => {
+  const user = userEvent.setup()
+  render(<Harness initial="2026-10-20" />)
+  await openByKeyboard(user)
+  await user.tab() // 日付 → 「期限を外す」
+  await user.keyboard('{Enter}')
+
+  expect(value()).toBe('')
+  expect(triggerButton()).toHaveFocus()
+})
+
+test('カレンダーは、表（grid）として読み上げられる。月の名前が、表の名前になる', async () => {
+  const user = userEvent.setup()
+  render(<Harness initial="2026-10-20" />)
+  await openByKeyboard(user)
+
+  const grid = screen.getByRole('grid', { name: '2026年10月' })
+  expect(within(grid).getAllByRole('columnheader')).toHaveLength(7)
+  expect(within(grid).getAllByRole('row')).toHaveLength(7) // 曜日の行 + 6週間
+  expect(within(grid).getAllByRole('gridcell')).toHaveLength(42)
+  expect(within(grid).getByRole('gridcell', { selected: true })).toHaveTextContent('20')
+  expect(within(grid).getByRole('button', { name: '2026年10月15日' })).toHaveAttribute('aria-current', 'date') // 今日
 })

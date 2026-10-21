@@ -53,9 +53,11 @@ export function CardComposer({ columnId, onCreated, onClose }: Props) {
     if (e.key === 'Escape') onClose()
   }
 
-  // 入力欄の外に出たとき：入力があれば追加、空なら閉じる（色や期限の操作では閉じない）
+  // 入力欄の外に出たとき：入力があれば追加、空なら閉じる（色や期限の操作では閉じない）。
+  // 期限のカレンダーは、画面の別の場所（body の直下）に描かれるが、この欄の一部として扱う（目印 data-due-popover）
   function handleBlur(e: FocusEvent<HTMLDivElement>) {
-    if (e.currentTarget.contains(e.relatedTarget)) return
+    const next = e.relatedTarget
+    if (next instanceof Element && (e.currentTarget.contains(next) || next.closest('[data-due-popover]'))) return
     void submit()
   }
 

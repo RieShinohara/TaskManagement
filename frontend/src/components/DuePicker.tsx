@@ -17,6 +17,17 @@ export function DuePicker({ value, today, onChange }: Props) {
   // カレンダーを出す場所。モーダル（<dialog>）の中にあるときは、その中に出す。
   // モーダルが開いている間、モーダルの外は、操作できない状態（inert）になるので、body に出すと、押せなくなる
   const [container, setContainer] = useState<HTMLElement>(document.body)
+  // キーボード（Enter / Space）で開いたか。そのときだけ、フォーカスを、カレンダーの中に移す。
+  // マウスで開いたときは、入力欄から、フォーカスを奪わない（日付を選んだあと、Enter でカードを追加できるように）
+  const [openedByKeyboard, setOpenedByKeyboard] = useState(false)
+
+  // 閉じる。カレンダーの中に、フォーカスがあったとき（キーボードで操作していたとき）は、フォーカスを、開いたボタンに戻す。
+  // マウスで操作していたとき（フォーカスは、入力欄などに残っている）は、そのまま
+  function closeAndFocusTrigger() {
+    const hadFocus = popoverRef.current?.contains(document.activeElement)
+    close()
+    if (hadFocus) triggerRef.current?.focus()
+  }
 
   return (
     <>
@@ -27,11 +38,12 @@ export function DuePicker({ value, today, onChange }: Props) {
         aria-expanded={open}
         // 押しても、入力欄からフォーカスを外さない
         onMouseDown={(e) => e.preventDefault()}
-        onClick={() => {
+        onClick={(e) => {
           if (open) {
             close()
             return
           }
+          setOpenedByKeyboard(e.detail === 0) // Enter / Space で押したときの click は、detail が 0（マウスは 1 以上）
           setContainer(triggerRef.current?.closest('dialog') ?? document.body)
           setOpen(true)
         }}
@@ -45,6 +57,7 @@ export function DuePicker({ value, today, onChange }: Props) {
         createPortal(
           <div
             ref={popoverRef}
+            data-due-popover // 追加の入力欄が、「フォーカスが、欄の外に出た」と間違えないための目印
             // 位置が決まるまでは、見えないようにしておく（一瞬、ずれた場所に出るのを防ぐ）
             style={{ position: 'fixed', top: position?.top ?? 0, left: position?.left ?? 0 }}
             className={`z-[60] ${position ? '' : 'invisible'}`}
@@ -52,15 +65,18 @@ export function DuePicker({ value, today, onChange }: Props) {
             <Calendar
               value={value}
               today={today}
+              // 位置が決まって、見える状態になってから、フォーカスを移す（見えない間は、フォーカスできない）
+              ready={position !== null}
+              focusOnOpen={openedByKeyboard}
               onSelect={(date) => {
                 onChange(date)
-                close()
+                closeAndFocusTrigger()
               }}
               onClear={() => {
                 onChange('')
-                close()
+                closeAndFocusTrigger()
               }}
-              onEscape={close}
+              onEscape={closeAndFocusTrigger}
             />
           </div>,
           container,

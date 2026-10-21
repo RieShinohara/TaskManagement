@@ -29,7 +29,7 @@ SpotBugs の `EI_EXPOSE_REP` / `EI_EXPOSE_REP2`（9 件）：リストを持つ 
 ### 2.1 バックエンド
 | ID | 重大度 | 場所 | 指摘 | 推奨 | 判断 |
 |---|---|---|---|---|---|
-| B1 | 高 | `application.yml` の `ddl-auto: update` | スキーマの変更履歴が残らない。列の削除や型の変更はされない | Flyway を導入し、`ddl-auto: validate` にする（`tech-stack.md` でも検討中としている） | |
+| B1 | 高 | `application.yml` の `ddl-auto: update` | スキーマの変更履歴が残らない。列の削除や型の変更はされない | Flyway を導入し、`ddl-auto: validate` にする | 対応済み（Issue #88）。V1 を作り、既存DBは baseline で受け入れた。カード17枚の `md5` が前後で同じことと、`validate` がずれを検出することを、動かして確かめた |
 | B2 | 中〜高 | `BackgroundImageController.put`（`@RequestBody byte[]`） | 本文を全部メモリに読んでから 5MB を判定していた。300MB を送ると、全部（314,572,803 バイト）を受け取ってから 400 を返すことを、動かして確かめた。超過時のコードも 400（標準は 413） | `Content-Length` を先に検査し、申告がなくても上限+1 バイトで読むのをやめる。超過は 413 | 対応済み（Issue #83）。直したあと、300MB は約 0.3MB（申告あり）〜5.6MB（申告なし）で 413 |
 | B3 | 中 | `backend/src` 全体（`@RestControllerAdvice` が 0 件。`ResponseStatusException` が 15 か所） | Service が web 層の型（`ResponseStatusException`）を投げている。エラー本文の形が、Spring 標準のまま | 業務の例外（例：カードが見つからない）を作り、`@RestControllerAdvice` で `ProblemDetail`（RFC 9457）にそろえる | |
 | B4 | 中 | `UserBackgroundImageRepository`（DTO を import）、`BackgroundImageController`・`BackgroundImageService`（Entity を直接扱う） | 層の依存が逆向き。JPQL に DTO のクラス名を文字列で埋め込んでいる | インターフェース射影にする。Service は Entity でなく専用の型を返す。ArchUnit で再発を防ぐ | |
@@ -41,7 +41,7 @@ SpotBugs の `EI_EXPOSE_REP` / `EI_EXPOSE_REP2`（9 件）：リストを持つ 
 | B10 | 低 | `POST /api/cards` | `Location` ヘッダがない | `ResponseEntity.created(...)` | |
 | B11 | 低 | `HealthController` | 自作の動作確認 | `spring-boot-starter-actuator` の `/actuator/health` | |
 | B12 | 低 | `application.yml`（`show-sql: true`）、`docker-compose.yml`（5432 を全部に公開） | 常時 SQL を出す。DB のポートが、外にも開く | 開発用の設定に限る。`127.0.0.1:5432:5432` にする | |
-| B13 | 低 | `card.column_id` | 外部キーに索引がない（PostgreSQL は自動で作らない） | `@Index` を付ける | |
+| B13 | 低 | `card.column_id` | 外部キーに索引がない（PostgreSQL は自動で作らない） | `@Index` を付ける | Flyway が入ったので、`V2__…sql` で足せる（Issue #88 のあと） |
 | B14 | 低 | テスト | テストが同じ DB を共有し、`BackupApiTests` は手で元に戻している。失敗すると、データが残る | `@Transactional` か、`@BeforeEach` で全消去にそろえる | |
 | B15 | 前提 | 全体 | 認証と CSRF 対策がない。`POST /api/backup/restore` は全データを入れ替える | 1 人でこの PC だけで使う前提（`non-functional-requirements.md`）を守る。公開する場合は、Spring Security が必要 | |
 

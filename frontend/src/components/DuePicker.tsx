@@ -13,7 +13,7 @@ type Props = {
 // 期限の欄。押すと、すぐ下にカレンダーが開く。下に入らないときは、上に開く（位置の決め方は usePopover）。
 // カレンダーは、画面に固定して（fixed）、body の直下に出す。列やモーダルの枠で、切り取られないようにするため
 export function DuePicker({ value, today, onChange }: Props) {
-  const { open, setOpen, close, position, triggerRef, popoverRef } = usePopover()
+  const { open, setOpen, close, closeAndFocusTrigger, position, triggerRef, popoverRef } = usePopover()
   // カレンダーを出す場所。モーダル（<dialog>）の中にあるときは、その中に出す。
   // モーダルが開いている間、モーダルの外は、操作できない状態（inert）になるので、body に出すと、押せなくなる
   const [container, setContainer] = useState<HTMLElement>(document.body)
@@ -21,13 +21,6 @@ export function DuePicker({ value, today, onChange }: Props) {
   // マウスで開いたときは、入力欄から、フォーカスを奪わない（日付を選んだあと、Enter でカードを追加できるように）
   const [openedByKeyboard, setOpenedByKeyboard] = useState(false)
 
-  // 閉じる。カレンダーの中に、フォーカスがあったとき（キーボードで操作していたとき）は、フォーカスを、開いたボタンに戻す。
-  // マウスで操作していたとき（フォーカスは、入力欄などに残っている）は、そのまま
-  function closeAndFocusTrigger() {
-    const hadFocus = popoverRef.current?.contains(document.activeElement)
-    close()
-    if (hadFocus) triggerRef.current?.focus()
-  }
 
   return (
     <>

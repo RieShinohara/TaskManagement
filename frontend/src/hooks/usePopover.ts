@@ -56,5 +56,13 @@ export function usePopover() {
     setPosition(null)
   }, [])
 
-  return { open, setOpen, close, position, triggerRef, popoverRef }
+  // 閉じる。窓の中に、フォーカスがあったとき（キーボードで操作していたとき）は、フォーカスを、開いたボタンに戻す。
+  // マウスで操作していたとき（フォーカスは、ほかの所に残っている）は、そのまま
+  const closeAndFocusTrigger = useCallback(() => {
+    const hadFocus = popoverRef.current?.contains(document.activeElement)
+    close()
+    if (hadFocus) triggerRef.current?.focus()
+  }, [close])
+
+  return { open, setOpen, close, closeAndFocusTrigger, position, triggerRef, popoverRef }
 }

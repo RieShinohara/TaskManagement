@@ -197,3 +197,118 @@ test('設定の返事の形が違っても、ボードは表示される（背�
   expect(await screen.findByRole('region', { name: 'ToDo' })).toBeInTheDocument()
   expect(layer()).toBeNull()
 })
+
+// ---------- キーボードだけで使える（品質チェック F6 の後半） ----------
+// 矢印キーは、フォーカスを動かすだけ。選ぶのは、Enter か Space
+// （選ぶとすぐ背景が切り替わり、保存されて、窓が閉じるので、矢印キーで選ぶと、使えない）
+
+const radio = (name: string) => screen.getByRole('radio', { name })
+const pickerButton = () => screen.getByRole('button', { name: '背景' })
+
+async function openByKeyboard(user: ReturnType<typeof userEvent.setup>) {
+  pickerButton().focus()
+  await user.keyboard('{Enter}')
+  return screen.getByRole('dialog', { name: '背景を選ぶ' })
+}
+
+test('Enter で開くと、フォーカスが、いまの背景の選択肢に移る', async () => {
+  const { user } = await setup('night')
+  await waitFor(() => expect(layer()).toHaveAttribute('data-scene', 'night'))
+
+  await openByKeyboard(user)
+
+  expect(radio('星空')).toHaveFocus()
+})
+
+test('マウスで開いたときは、フォーカスを、窓の中に移さない', async () => {
+  const { user } = await setup('sky')
+
+  await openPicker(user)
+
+  expect(pickerButton()).toHaveFocus()
+})
+
+test('矢印キーで、フォーカスだけが動く（端では、反対の端に回る）。選ばれた背景は、変わらない', async () => {
+  const { fn, user } = await setup('sky')
+  await openByKeyboard(user)
+  expect(radio('青空')).toHaveFocus()
+
+  await user.keyboard('{ArrowDown}')
+  expect(radio('夕焼け')).toHaveFocus()
+  await user.keyboard('{ArrowDown}')
+  expect(radio('星空')).toHaveFocus()
+  await user.keyboard('{ArrowRight}') // → も、次へ
+  expect(radio('自動（時間帯）')).toHaveFocus()
+  await user.keyboard('{ArrowDown}') // いちばん下の次は、いちばん上
+  expect(radio('無地')).toHaveFocus()
+  await user.keyboard('{ArrowUp}') // いちばん上の前は、いちばん下
+  expect(radio('自動（時間帯）')).toHaveFocus()
+  await user.keyboard('{Home}')
+  expect(radio('無地')).toHaveFocus()
+  await user.keyboard('{End}')
+  expect(radio('自動（時間帯）')).toHaveFocus()
+
+  expect(radio('青空')).toHaveAttribute('aria-checked', 'true') // 選びは、そのまま
+  expect(putCalls(fn)).toHaveLength(0)
+})
+
+test('Tab の止まる選択肢は、いまのフォーカスの1つだけ（矢印キーで動くと、止まる場所も動く）', async () => {
+  const { user } = await setup('sky')
+  const dialog = await openByKeyboard(user)
+  const stops = () => within(dialog).getAllByRole('radio').filter((r) => r.tabIndex === 0)
+
+  expect(stops()).toEqual([radio('青空')])
+  await user.keyboard('{ArrowDown}')
+  expect(stops()).toEqual([radio('夕焼け')])
+})
+
+test('Tab は、窓の中を回る（青空の選択肢 → 各行の「画像を選ぶ」 → 最初に戻る）。外には出ない', async () => {
+  const { user } = await setup('sky')
+  await openByKeyboard(user)
+  expect(radio('青空')).toHaveFocus()
+
+  await user.tab()
+  expect(screen.getByRole('button', { name: '青空の画像を選ぶ' })).toHaveFocus()
+  await user.tab()
+  expect(screen.getByRole('button', { name: '夕焼けの画像を選ぶ' })).toHaveFocus()
+  await user.tab()
+  expect(screen.getByRole('button', { name: '星空の画像を選ぶ' })).toHaveFocus()
+  await user.tab() // いちばん後ろの次は、いちばん前
+  expect(radio('青空')).toHaveFocus()
+  await user.tab({ shift: true }) // いちばん前の前は、いちばん後ろ
+  expect(screen.getByRole('button', { name: '星空の画像を選ぶ' })).toHaveFocus()
+  expect(screen.getByRole('button', { name: 'バックアップ' })).not.toHaveFocus()
+})
+
+test('Enter で選ぶと、背景が切り替わり、窓が閉じて、フォーカスが「背景」のボタンに戻る', async () => {
+  const { fn, user } = await setup('sky')
+  await openByKeyboard(user)
+
+  await user.keyboard('{ArrowDown}{Enter}') // 夕焼け
+
+  expect(putCalls(fn)).toHaveLength(1)
+  expect(JSON.parse(putCalls(fn)[0][1]!.body as string)).toEqual({ background: 'sunset' })
+  await waitFor(() => expect(layer()).toHaveAttribute('data-scene', 'sunset'))
+  expect(screen.queryByRole('dialog', { name: '背景を選ぶ' })).not.toBeInTheDocument()
+  expect(pickerButton()).toHaveFocus()
+})
+
+test('Space でも選べる', async () => {
+  const { fn, user } = await setup('sky')
+  await openByKeyboard(user)
+
+  await user.keyboard('{End}{Home}{ArrowDown}{ArrowDown}{ArrowDown} ') // 無地 → 青空 → 夕焼け → 星空。Space
+
+  expect(JSON.parse(putCalls(fn)[0][1]!.body as string)).toEqual({ background: 'night' })
+})
+
+test('Esc で閉じると、何も選ばず、フォーカスが「背景」のボタンに戻る', async () => {
+  const { fn, user } = await setup('sky')
+  await openByKeyboard(user)
+
+  await user.keyboard('{ArrowDown}{Escape}')
+
+  expect(screen.queryByRole('dialog', { name: '背景を選ぶ' })).not.toBeInTheDocument()
+  expect(putCalls(fn)).toHaveLength(0)
+  expect(pickerButton()).toHaveFocus()
+})

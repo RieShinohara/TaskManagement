@@ -214,15 +214,39 @@ public class Card {
 | 主キー（PK） | 1行を特定する番号（`id`） |
 | 外部キー（FK） | 別のテーブルの行を指す番号（`column_id` → `board_column.id`） |
 
-## 8. テーブルの作り方：`ddl-auto`
-`application.yml` の `ddl-auto: update` は、**起動のときに、Entity に合わせて、テーブルを自動で作る・足りない列を足す**。講義と同じ方式。
+## 8. テーブルの作り方：Flyway と `ddl-auto: validate`
 
-| 方式 | 特徴 |
+### 前の方式と、困ったこと
+最初は、`ddl-auto: update`（講義と同じ）で、**起動のたびに、Hibernate が Entity を見て、テーブルを自動で作る・足りない列を足して**いた。手軽だが、次の困りごとがあった（品質チェックの B1）。
+- いつ、どう変えたかの**履歴が残らない**
+- 列の削除や型の変更は、してくれない
+- どこで動かしても、同じテーブルになる保証がない
+
+### 今の方式：Flyway
+**Flyway** は、DB の変更を、**SQL ファイルとして、番号順に記録**して流す道具（実際の開発で標準）。
+
+| もの | 場所・内容 |
 |---|---|
-| `ddl-auto: update`（今） | 手軽。Entityを書くだけで、テーブルができる |
-| Flyway（将来の候補） | テーブルの定義を、SQLファイルとして記録に残す。実際の開発で標準 |
+| SQL ファイル | `src/main/resources/db/migration/V1__create_tables.sql`（`V` ＋ 番号 ＋ `__` ＋ 説明） |
+| 流した記録 | DB の `flyway_schema_history` 表（どの番号を、いつ流したか） |
+| `ddl-auto: validate` | Hibernate は、テーブルを**作らない**。Entity とテーブルが合っているかを、起動のときに**確かめるだけ** |
 
-列の最初の3件（ToDo / 作業中 / 完了）は、`DataInitializer` が、起動のときに、1つもなければ入れる。
+テーブルを変えたいときは、`V2__…sql` のように、**新しい番号のファイルを足す**。流し終わった `V1` は、**書き換えない**（書き換えると、Flyway が「記録と違う」と気づいて、止まる）。
+
+### 学んだポイント
+- **すでにテーブルがある DB には、「ベースライン」**：Flyway を入れる前に、Hibernate が作ったテーブルが、手元の DB にある。そこで V1 を流すと、「すでにある」と失敗する。`baseline-on-migrate: true`、`baseline-version: 1` で、「V1 は実行済み」と記録して、**データには触れず**に、管理を始める。新しい DB（空）では、V1 が流れる
+- **V1 は、今のテーブルから作る**：手で書き写すと間違えるので、今の DB から `pg_dump --schema-only`（テーブルの形だけを取り出す）で、形を取り出して、見比べた。違いは、列の並び順と、外部キーの名前（読みやすい名前にした）だけ
+- **データを守る手順**：①作業の前に、`pg_dump` で丸ごとバックアップ ②カード・列・設定の内容から、`md5`（内容が同じかを確かめる短い文字列）を作っておく ③既存の DB に、新しいコードでつないだあと、`md5` を比べた。**カード17枚の `md5` は、前と同じ**だった（1文字も変わっていない）
+- **`validate` が、ずれを見つける**：使い捨ての DB で、わざと `card` の `title` 列を消して起動すると、`Schema validation: missing column [title] in table [card]` と、起動に失敗した。ずれを、黙って直さずに、止めてくれる
+- **テストは、空の DB から V1 で作る**：Testcontainers の空の PostgreSQL に、V1 が流れ、`validate` が通る。つまり、**Entity と V1 が合っていること**を、テストのたびに確かめている（`FlywayMigrationTests`）
+- **Spring Boot 4 の部品の名前**：`spring-boot-starter-flyway`（Flyway の本体）と、`flyway-database-postgresql`（PostgreSQL 用）の 2 つが要る。後者を入れ忘れると、「PostgreSQL を扱えない」というエラーになる
+
+列の最初の3件（ToDo / 作業中 / 完了）は、`DataInitializer` が、起動のときに、1つもなければ入れる（テーブルの変更ではなく、データなので、Flyway では入れていない）。
+
+### やってみよう
+1. DB に入って、履歴を見る：`docker exec taskmanagement-db psql -U taskmanagement -d taskmanagement -c "select * from flyway_schema_history"`（既存の DB は、`BASELINE` の1行。新しい DB は、`V1` が `SQL` として1行）
+2. `V1__create_tables.sql` を開いて、Entity（`Card.java` など）と、見比べる。どの列が、どの項目に対応しているか
+3. （使い捨ての DB で）テーブルの列を消して、アプリを起動してみる（`POSTGRES_DB` を、別の DB 名にして起動する）。どんなエラーが出るか
 
 ## 9. テスト：Testcontainers
 `gradlew test` のとき、**使い捨ての PostgreSQL を、Docker で自動的に起動**して、テストする。
@@ -277,7 +301,7 @@ Entity       Card.update(…) が値を入れ替える → 保存（@Transaction
 - **空の値は「消す」**：`description` や `dueDate` を `null` で送ると、その項目がなくなる。空白だけの説明文も、`null`（なし）として保存する
 - **列と並び順は変えない**：`Card.update` は4項目だけを入れ替える。カードを動かすのは、ドラッグ＆ドロップの回で、別のAPIとして作る
 - **`@Transactional` だけで保存される**：Service の中でEntityの値を変えると、メソッドが終わるときに、JPA が自動で `UPDATE` を実行する（`save` を呼ばなくてよい）
-- **列の追加は、自動**：Entity に `description` を足すと、`ddl-auto: update` が、起動のときに card テーブルへ列を足す。既存のカードは、説明文が `null` のまま残る
+- **列の追加**（当時は `ddl-auto: update` が自動で足していた。今は、Flyway の新しい SQL（`V2__…sql`）で足す。8章）：Entity に `description` を足すと、card テーブルへ列が足される。既存のカードは、説明文が `null` のまま残る
 - **追加と更新で、チェックを分けた**：`CardCreateRequest`（列IDが要る、色は省略可）と `CardUpdateRequest`（列IDは要らない、色は必須）。同じに見えても、お願いの意味が違うので、別のクラスにした
 - テスト `CardUpdateApiTests`：更新できる／消せる／列と並び順が変わらない／2000文字の境界／400と404／検査に失敗したら内容が変わらない
 

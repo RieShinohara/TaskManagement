@@ -175,7 +175,16 @@ Invoke-RestMethod http://localhost:8080/api/backup/restore -Method Post -Content
 - 知らない項目は、無視して読める
 - バックアップのファイルは、リポジトリに入れない（公開リポジトリなので、個人の予定が入るおそれがある）
 
-テーブルは、バックエンドの起動時に Entity（Javaのクラス）から自動で作られる（`ddl-auto: update`）。列の最初の3件も、起動時に入る。
+テーブルは、**Flyway** が、`src/main/resources/db/migration/` の SQL（`V1__create_tables.sql` など）を、番号順に流して作る。流した記録は、DBの `flyway_schema_history` 表に残る。
+`ddl-auto` は `validate`：テーブルを作らず、起動のときに、Entity とテーブルが合っているかを確かめるだけ（ずれていたら、起動に失敗する）。
+列の最初の3件（ToDo / 作業中 / 完了）は、起動時に、`DataInitializer` が入れる。
+
+テーブルを変えるとき（列を足す、索引を付ける、など）：
+1. `V2__…sql` のように、**新しい番号の SQL ファイルを足す**（すでに流した `V1` は、**書き換えない**）
+2. 必要なら、Entity も直す
+3. `.gradlew.bat check` を実行する（空の DB に、V1 → V2 の順で作り、Entity と合っているかを確かめる）
+
+Flyway を入れる前から使っていた DB（すでにテーブルがある DB）は、`baseline-on-migrate: true` の設定で、「V1 は実行済み」として受け入れる（データには触れない）。
 
 ## サンプルデータの投入
 動作確認用に、カード10件のサンプルデータを、SQLで投入できる（[backend/sql/sample-data.sql](sql/sample-data.sql)）。

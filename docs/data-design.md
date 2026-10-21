@@ -86,7 +86,7 @@ erDiagram
 - 背景の設定がないバックアップを読み込んだときは、背景の設定を sky（青空、初期値）にする
 
 ## 4. 実装での具体化（PostgreSQL、2026-10-13）
-バックエンドの Entity から、次のテーブルが作られる。
+次のテーブルが、Flyway の SQL（`backend/src/main/resources/db/migration/V1__create_tables.sql`）で作られる（2026-10-21 までは、Entity から自動で作っていた）。Entity とテーブルが合っているかは、起動のときに、Hibernate が確かめる（`ddl-auto: validate`）。
 
 | テーブル | 列 | 型 |
 |---|---|---|

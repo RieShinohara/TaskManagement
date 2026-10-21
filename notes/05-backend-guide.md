@@ -273,7 +273,7 @@ CREATE INDEX idx_card_column_position ON card (column_id, position);
 
 
 ### やってみよう
-1. DB に入って、履歴を見る：`docker exec taskmanagement-db psql -U taskmanagement -d taskmanagement -c "select * from flyway_schema_history"`（既存の DB は、`BASELINE` の1行。新しい DB は、`V1` が `SQL` として1行）
+1. DB に入って、履歴を見る：`docker exec taskmanagement-db psql -U taskmanagement -d taskmanagement -c "select * from flyway_schema_history"`（既存の DB は、`BASELINE`（V1）と、`SQL`（V2）の2行。新しい DB は、V1 と V2 が、どちらも `SQL`）
 2. `V1__create_tables.sql` を開いて、Entity（`Card.java` など）と、見比べる。どの列が、どの項目に対応しているか
 3. （使い捨ての DB で）テーブルの列を消して、アプリを起動してみる（`POSTGRES_DB` を、別の DB 名にして起動する）。どんなエラーが出るか
 

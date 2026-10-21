@@ -14,8 +14,12 @@ import type {
 const CONNECTION_ERROR = 'サーバーに接続できません。バックエンドとDBが起動しているか確認してください。'
 
 // 通信の共通部分。開発中は、Vite のプロキシが /api をバックエンド（8080番）に中継する
-// badRequestMessage：400 のときに出す文（省略すると、カードの入力についての文）
-async function request<T>(url: string, init?: RequestInit, badRequestMessage?: string): Promise<T> {
+// messages：サーバーに断られたときに出す文（省略できる）
+//   badRequest：400（お願いの内容がだめ）のとき。省略すると、カードの入力についての文
+//   tooLarge：413（大きすぎる）のとき。省略すると、番号つきの一般的なエラー
+type Messages = { badRequest?: string; tooLarge?: string }
+
+async function request<T>(url: string, init?: RequestInit, messages?: Messages): Promise<T> {
   let response: Response
   try {
     response = init ? await fetch(url, init) : await fetch(url)
@@ -25,9 +29,10 @@ async function request<T>(url: string, init?: RequestInit, badRequestMessage?: s
   if (!response.ok) {
     // バックエンドが止まっているとき、プロキシは 502 などを返す
     if ([502, 503, 504].includes(response.status)) throw new Error(CONNECTION_ERROR)
+    if (response.status === 413 && messages?.tooLarge) throw new Error(messages.tooLarge)
     if (response.status === 400)
       throw new Error(
-        badRequestMessage ?? '入力内容を確認してください（タイトルは必須で255文字まで、説明文は2000文字までです）',
+        messages?.badRequest ?? '入力内容を確認してください（タイトルは必須で255文字まで、説明文は2000文字までです）',
       )
     if (response.status === 404) throw new Error('カードが見つかりません。画面を読み込み直してください。')
     throw new Error(`サーバーからエラーが返りました（${response.status}）`)
@@ -98,7 +103,7 @@ export function restoreBackup(file: BackupFile): Promise<void> {
   return request<void>(
     '/api/backup/restore',
     { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(file) },
-    UNREADABLE_BACKUP,
+    { badRequest: UNREADABLE_BACKUP },
   )
 }
 
@@ -125,7 +130,10 @@ export function uploadBackgroundImage(slot: UserImageSlot, jpeg: Blob): Promise<
   return request<UserImage>(
     `/api/background-images/${slot}`,
     { method: 'PUT', headers: { 'Content-Type': 'image/jpeg' }, body: jpeg },
-    '画像を登録できませんでした。別の画像を選んでください。',
+    {
+      badRequest: '画像を登録できませんでした。別の画像を選んでください。',
+      tooLarge: '画像のファイルサイズが大きすぎて、登録できませんでした（5MBまで）。画像を圧縮するか、別の画像を選んでください。',
+    },
   )
 }
 

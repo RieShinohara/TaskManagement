@@ -243,8 +243,37 @@ public class Card {
 
 列の最初の3件（ToDo / 作業中 / 完了）は、`DataInitializer` が、起動のときに、1つもなければ入れる（テーブルの変更ではなく、データなので、Flyway では入れていない）。
 
+### 実例：V2 で、索引を足す（品質チェック B13）
+**索引（インデックス）**は、本の「索引（さくいん）」と同じで、「この列の値は、どこにあるか」を、先に調べておいた目次。索引がないと、PostgreSQL は、表の**全部の行**を順に調べる（`Seq Scan`）。PostgreSQL は、外部キー（`card.column_id`）に、自動では索引を作らない。
+
+`V2__add_card_column_position_index.sql`：
+```sql
+CREATE INDEX idx_card_column_position ON card (column_id, position);
+```
+- **2つの列をまとめた索引**にした。アプリの検索は、「ある列の（`column_id`）、並び順（`position`）」の形なので、1本で、両方に効く
+- **すでにある DB でも、V2 だけが流れる**：既存の DB は、V1 が「実行済み（baseline）」。次の起動で、`Migrating schema "public" to version "2"` と、V2 だけが流れた。データの `md5` は、前と同じ（変わっていない）
+- **流し終わった V1 は、書き換えない**。新しい変更は、新しい番号のファイルを足す（これが、Flyway の約束）
+- **`EXPLAIN ANALYZE`**：PostgreSQL が、どう検索するか（実行計画）と、実際にかかった時間を教えてくれる命令。使い捨ての DB に、カードを30万枚入れて、前後を比べた
+
+| 検索（30万枚。1つの列に10万枚） | 索引なし | 索引あり |
+|---|---|---|
+| ある列の、いちばん上の位置（`min`） | 約25ms（`Seq Scan`） | **約0.07ms**（`Index Only Scan`） |
+| ある列の全部（10万枚）を、並び順に | 約48ms | 約47ms（ほぼ同じ） |
+| ある列の 10万枚の `position` を書き換える | 約0.5秒 | 約0.9秒 |
+
+- **索引が効くのは、「一部だけを、ピンポイントで探す」とき**。列の全部（全体の3分の1）を取り出す検索は、結局、たくさん読むので、あまり変わらない
+- **索引には、代償がある**：データを書き換えるたびに、索引も更新する。索引のある `position` を書き換える（移動で連番を振り直す）と、約2倍かかった（1回ずつの測定で、誤差はある）。索引の大きさも増える（30万枚で、約9MB）
+- **このアプリでは、効果は小さい**：カードは最大1万枚、列は3つ。どちらも、ほぼ一瞬。それでも、「外部キーには索引を付ける」は、よくある基本の作り（列を消すときの確認などで、効く）。**「測ってから、決める」**のが大事
+- **大きな表に、あとから索引を足すとき**：`CREATE INDEX` は、作っている間、書き込みを止める。大きな本番の DB では、`CREATE INDEX CONCURRENTLY`（止めずに作る）を使うが、Flyway のトランザクションの外で流す必要がある。このアプリは、小さいので、ふつうの `CREATE INDEX` にした
+
+### やってみよう（B13）
+1. `docker exec taskmanagement-db psql -U taskmanagement -d taskmanagement -c "select * from flyway_schema_history"`：V1（BASELINE）と V2（SQL）の2行があるか
+2. `docker exec taskmanagement-db psql -U taskmanagement -d taskmanagement -c "\d card"`：「Indexes:」に、`idx_card_column_position` があるか
+3. （使い捨ての DB で）カードを何万枚か入れて、`explain analyze select min(position) from card where column_id = 2` を、索引あり・なしで比べる
+
+
 ### やってみよう
-1. DB に入って、履歴を見る：`docker exec taskmanagement-db psql -U taskmanagement -d taskmanagement -c "select * from flyway_schema_history"`（既存の DB は、`BASELINE` の1行。新しい DB は、`V1` が `SQL` として1行）
+1. DB に入って、履歴を見る：`docker exec taskmanagement-db psql -U taskmanagement -d taskmanagement -c "select * from flyway_schema_history"`（既存の DB は、`BASELINE`（V1）と、`SQL`（V2）の2行。新しい DB は、V1 と V2 が、どちらも `SQL`）
 2. `V1__create_tables.sql` を開いて、Entity（`Card.java` など）と、見比べる。どの列が、どの項目に対応しているか
 3. （使い捨ての DB で）テーブルの列を消して、アプリを起動してみる（`POSTGRES_DB` を、別の DB 名にして起動する）。どんなエラーが出るか
 

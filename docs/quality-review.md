@@ -41,7 +41,7 @@ SpotBugs の `EI_EXPOSE_REP` / `EI_EXPOSE_REP2`（9 件）：リストを持つ 
 | B10 | 低 | `POST /api/cards` | `Location` ヘッダがない | `ResponseEntity.created(...)` | |
 | B11 | 低 | `HealthController` | 自作の動作確認 | `spring-boot-starter-actuator` の `/actuator/health` | |
 | B12 | 低 | `application.yml`（`show-sql: true`）、`docker-compose.yml`（5432 を全部に公開） | 常時 SQL を出す。DB のポートが、外にも開く | 開発用の設定に限る。`127.0.0.1:5432:5432` にする | |
-| B13 | 低 | `card.column_id` | 外部キーに索引がない（PostgreSQL は自動で作らない） | `@Index` を付ける | Flyway が入ったので、`V2__…sql` で足せる（Issue #88 のあと） |
+| B13 | 低 | `card.column_id` | 外部キーに索引がない（PostgreSQL は自動で作らない） | `(column_id, position)` の索引を、Flyway の V2 で足す | 対応済み（Issue #92）。カード30万枚の使い捨て DB で測った：「列の最小位置」は約25ms → 約0.07ms。一方、「列の全部を取り出す」はほぼ同じ（約48ms → 約47ms）、10万枚の position の書き換えは約0.5秒 → 約0.9秒（1回ずつの測定）。このアプリ（最大1万枚）では、効果は小さい |
 | B14 | 低 | テスト | テストが同じ DB を共有し、`BackupApiTests` は手で元に戻している。失敗すると、データが残る | `@Transactional` か、`@BeforeEach` で全消去にそろえる | |
 | B15 | 前提 | 全体 | 認証と CSRF 対策がない。`POST /api/backup/restore` は全データを入れ替える | 1 人でこの PC だけで使う前提（`non-functional-requirements.md`）を守る。公開する場合は、Spring Security が必要 | |
 

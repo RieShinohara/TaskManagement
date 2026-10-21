@@ -8,13 +8,15 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
-// カード。このクラスから card テーブルができる。
+// カード。card テーブルに対応する（テーブルは Flyway の SQL で作る。db/migration）。
+// 索引は、V2 の SQL で作る。ここに書くのは、「こういう索引がある」という説明で、Hibernate は、作らない・確かめない
 @Entity
-@Table(name = "card")
+@Table(name = "card", indexes = @Index(name = "idx_card_column_position", columnList = "column_id, position"))
 public class Card {
 
 	@Id

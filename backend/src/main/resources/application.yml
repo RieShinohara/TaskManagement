@@ -8,9 +8,14 @@ spring:
     url: jdbc:postgresql://localhost:5432/${POSTGRES_DB:taskmanagement}
     username: ${POSTGRES_USER:taskmanagement}
     password: ${POSTGRES_PASSWORD}
+  flyway:
+    # テーブルは、Flyway が、db/migration の SQL（V1、V2…）を順に流して作る。
+    # Flyway を入れる前に Hibernate が作った DB（すでにテーブルがある DB）は、V1 を実行済みとみなして受け入れる（データには触れない）
+    baseline-on-migrate: true
+    baseline-version: 1
   jpa:
     hibernate:
-      # Entity（Javaのクラス）に合わせて、起動時にテーブルを自動で作る・足りない列を足す
-      ddl-auto: update
+      # テーブルは作らない。Entity（Javaのクラス）とテーブルが合っているかを、起動のときに確かめるだけ（ずれていたら、起動に失敗する）
+      ddl-auto: validate
     # 実行されるSQLをログに出す（学習用）
     show-sql: true

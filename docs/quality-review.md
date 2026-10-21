@@ -53,7 +53,7 @@ SpotBugs の `EI_EXPOSE_REP` / `EI_EXPOSE_REP2`（9 件）：リストを持つ 
 | F3 | 中 | `api/client.ts` | 通信を中断できない（`AbortSignal` なし）。404 と 400 の文言が、どの操作でも同じ（例：期限順の 404 でも「カードが見つかりません」）。サーバーが HTML を 200 で返したときの、JSON の読み取りの失敗を処理していない。画面全体の ErrorBoundary もない | `AbortController`、操作ごとの文言、JSON の失敗の処理、ErrorBoundary | |
 | F4 | 中 | `useSettings.ts`、`Board.tsx` | 素早い連続操作（背景を続けて選ぶ、連続でドラッグ）で、失敗したときの「元に戻す」が、あとの操作の結果を消すことがある | 保存中は次の操作を待たせる、または順番に処理する | |
 | F5 | 中 | `lib/image.ts`、`lib/backup.ts` | 画像：ファイルの大きさ（20MB）しか見ない。展開後の画素数に上限がない。バックアップ：読む前の大きさの上限と、`version` の検査がない | 画素数の上限、ファイルの大きさの上限、`version` の確認 | |
-| F6 | 中 | `DuePicker.tsx`、`Calendar.tsx`、`BackgroundPicker.tsx` | 小さな窓を開いても、フォーカスが移らない。矢印キーで日付や背景を選べない（ARIA の `radiogroup` なのに） | フォーカスの移動、矢印キーの操作 | **期限のカレンダーは、対応済み**（Issue #94）：開くとフォーカスが日付に移る、矢印・Home / End・PageUp / PageDown で動かす、Enter / Space で選ぶ、Tab はカレンダーの中を回る、閉じるとボタンに戻る、`role="grid"`。ユーザーが、キーボードとマウスで確認済み。**背景の選択窓（`BackgroundPicker`）の矢印キー操作は、まだ**（別の Issue） |
+| F6 | 中 | `DuePicker.tsx`、`Calendar.tsx`、`BackgroundPicker.tsx` | 小さな窓を開いても、フォーカスが移らない。矢印キーで日付や背景を選べない（ARIA の `radiogroup` なのに） | フォーカスの移動、矢印キーの操作 | **対応済み**（期限のカレンダー：Issue #94、背景の選択窓：Issue #95）。開くとフォーカスが窓の中に移る、矢印キーで動かす、Enter / Space で選ぶ、Tab は窓の中を回る、閉じるとボタンに戻る。ユーザーが、キーボードとマウスで確認済み。背景の窓は、矢印キーで「動かす」だけで、「選ぶ」のは Enter / Space（選ぶとすぐ切り替わって閉じるため。標準のラジオボタンとの違い） |
 | F7 | 中 | テスト | アクセシビリティの自動検査（例：`jest-axe`）、フォーカス、連続操作のテストがない。カバレッジの設定もない | 追加を検討 | |
 | F8 | 低 | `Board.tsx`、`BoardColumn.tsx` ほか | `'完了'` と `255` の重複、`useCallback` の不足、`as` によるキャストの多用、期限切れの判定が 2 か所、`BackupControls` の完了表示に `aria-live` がない | 定数・関数にまとめる。型ガードにする | |
 | F9 | 低 | 設定 | Prettier（整形の自動化）と CI（PR での自動チェック）がない。TypeScript の `noUncheckedIndexedAccess` などは未設定 | 導入を検討（整形は差分が大きいので、単独の PR で） | |

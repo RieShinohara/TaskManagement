@@ -7,6 +7,7 @@ import {
   startOfWeek,
   yearMonthOf,
 } from '../lib/calendar'
+import { wrapTabFocus } from '../lib/focusTrap'
 
 type Props = {
   value: string // 選択中の日付 'YYYY-MM-DD'。未設定は ''
@@ -91,24 +92,6 @@ export function Calendar({ value, today, onSelect, onClear, onEscape, ready = tr
     setFocusedDate(next)
   }
 
-  // Tab は、カレンダーの中を回す（いちばん後ろの次は、いちばん前。外には出ない）
-  function handleTabKey(e: KeyboardEvent<HTMLDivElement>) {
-    if (e.key !== 'Tab') return
-    const items = Array.from(rootRef.current?.querySelectorAll<HTMLElement>('button') ?? []).filter(
-      (button) => button.tabIndex >= 0 && !button.hasAttribute('disabled'),
-    )
-    if (items.length === 0) return
-    const first = items[0]
-    const last = items[items.length - 1]
-    if (e.shiftKey && document.activeElement === first) {
-      e.preventDefault()
-      last.focus()
-    } else if (!e.shiftKey && document.activeElement === last) {
-      e.preventDefault()
-      first.focus()
-    }
-  }
-
   const navButton = 'rounded px-2 py-1 text-gray-600 hover:bg-gray-100'
 
   return (
@@ -119,7 +102,7 @@ export function Calendar({ value, today, onSelect, onClear, onEscape, ready = tr
       aria-label="期限日を選ぶ"
       // 中を押しても、入力欄などからフォーカスを奪わない
       onMouseDown={(e) => e.preventDefault()}
-      onKeyDown={handleTabKey}
+      onKeyDown={(e) => wrapTabFocus(e, rootRef.current)} // Tab は、カレンダーの中を回す（外には出ない）
       className="w-64 rounded-lg border border-[#d5dbe8] bg-white p-3 shadow-lg"
     >
       <div className="mb-2 flex items-center justify-between">

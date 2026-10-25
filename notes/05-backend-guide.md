@@ -129,7 +129,7 @@ GET http://localhost:8080/api/columns
 ### 今あるAPI
 | API | 内容 |
 |---|---|
-| `GET /api/health` | 動作確認。`{"status":"ok"}` |
+| `GET /actuator/health` | 動作確認（Spring の標準の部品 Actuator）。DBにつながっていれば `"status":"UP"`。以前は自作の `GET /api/health` だった（品質チェック B11 で置き換えた） |
 | `GET /api/columns` | 列の一覧 |
 | `GET /api/cards` | カードの一覧。絞り込みができる |
 | `GET /api/cards/{id}` | カードを1件取得 |

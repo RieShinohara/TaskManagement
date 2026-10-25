@@ -21,3 +21,9 @@ spring:
     open-in-view: false
     # 実行されるSQLをログに出す（学習用）。普段は出さない。見たいときは、.env に SHOW_SQL=true と書く
     show-sql: ${SHOW_SQL:false}
+management:
+  endpoints:
+    web:
+      exposure:
+        # 動作確認の /actuator/health だけを公開する。設定の値や部品の一覧が見える窓口は、開けない
+        include: health

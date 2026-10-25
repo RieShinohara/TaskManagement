@@ -36,7 +36,7 @@
 | テストと静的チェックをまとめて実行する | `.\gradlew.bat check`（テスト、Checkstyle、SpotBugs。カバレッジの結果は `build/reports/jacoco/test/html/index.html`） |
 | 止める | 起動したターミナルで `Ctrl + C` |
 
-起動後、ブラウザで <http://localhost:8080/api/health> を開き、`{"status":"ok"}` と表示されれば成功。
+起動後、ブラウザで <http://localhost:8080/actuator/health> を開き、`"status":"UP"` と表示されれば成功。
 
 実行されるSQLをログに出したい（学習用）ときは、`.env` に `SHOW_SQL=true` と書いてから起動する。書かなければ、SQLは出ない。
 
@@ -47,7 +47,7 @@
 
 | 窓口 | 内容 |
 |---|---|
-| `GET /api/health` | 動作確認。`{"status":"ok"}` が返る |
+| `GET /actuator/health` | 動作確認（Spring の標準の部品 Actuator）。DBにつながっていれば `"status":"UP"`。つながらないと `503` と `"status":"DOWN"`（返事まで約30秒かかる）。公開しているのは、これだけ |
 
 **列とカード**
 
@@ -217,7 +217,7 @@ backend/
 ├── sql/                サンプルデータのSQL
 ├── gradlew.bat など    Gradle Wrapper（Gradleを自動で用意する仕組み）
 └── src/
-    ├── main/java/…     プログラム本体（起動時に列を用意する DataInitializer、動作確認の HealthController、controller/ service/ など）
+    ├── main/java/…     プログラム本体（起動時に列を用意する DataInitializer、controller/ service/ など）
     ├── main/resources/ 設定ファイル（application.yml）
     └── test/java/…     テスト
 ```

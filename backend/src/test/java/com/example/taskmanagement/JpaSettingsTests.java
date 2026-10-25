@@ -28,4 +28,10 @@ class JpaSettingsTests {
 		assertThat(context.containsBean("openEntityManagerInViewInterceptor")).isFalse();
 	}
 
+	// 実行するSQLのログは、普段は出さない。見たいときは、環境変数 SHOW_SQL=true で出せる
+	@Test
+	void SQLのログは_普段は出さない() {
+		assertThat(environment.getProperty("spring.jpa.show-sql", Boolean.class)).isFalse();
+	}
+
 }

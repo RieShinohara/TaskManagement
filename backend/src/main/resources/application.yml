@@ -19,5 +19,5 @@ spring:
       ddl-auto: validate
     # 画面への返事を作り終えるまで、DBの接続を持ち続ける仕組み（既定は true）を切る。DBを使うのは Service の中だけにして、接続を早く返す
     open-in-view: false
-    # 実行されるSQLをログに出す（学習用）
-    show-sql: true
+    # 実行されるSQLをログに出す（学習用）。普段は出さない。見たいときは、.env に SHOW_SQL=true と書く
+    show-sql: ${SHOW_SQL:false}

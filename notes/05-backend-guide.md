@@ -542,7 +542,7 @@ ApiExceptionHandler（@RestControllerAdvice）
 {"detail":"カードが見つかりません: 999999","instance":"/api/cards/999999","status":404,"title":"Not Found"}
 ```
 
-- **`ResponseEntityExceptionHandler` を継ぐ**：Spring 標準の例外（JSON が壊れている、許可されていない操作、存在しないパス）も、まとめて `ProblemDetail` になる
+- **`ResponseEntityExceptionHandler` を継ぐ**：Spring 標準の例外（JSON が壊れている、許可されていない操作、存在しないパス）も、まとめて `ProblemDetail` になる。ただし、`detail` の文は英語の既定のままなので、`messages.properties` で日本語にした（下の「`detail` を日本語にする」）
 - **検査の失敗には、`errors` を足した**：`@Valid` の検査に失敗したとき、どの項目が、なぜだめかを、本文で読める
 
 ```json
@@ -552,13 +552,23 @@ ApiExceptionHandler（@RestControllerAdvice）
 - **想定外のエラー（500）**：プログラムの不具合や、DBの故障。**原因はログに残し**（スタックトレースつき）、本文には「サーバーでエラーが起きました」という一般的な文言だけを返す。例外のメッセージには、内部の情報（SQL、パスワードの断片など）が入ることがあり、外に見せるのは危ないため
 - **画面は、変えていない**：画面は、返事の番号だけを見て、本文は読んでいない。だから、本文の形を変えても、壊れない
 
+### `detail` を日本語にする（`messages.properties`）
+Spring 標準の例外（JSON が壊れている、存在しないパス、許可されていない操作など）の `detail` は、最初は英語の既定の文だった（例：`Failed to read request`）。
+- Spring は、`detail` を、「`problemDetail.` ＋ 例外のクラス名」というキーで、`messages.properties`（`src/main/resources/`）から探す。見つかれば、その文を使う。見つからなければ、英語の既定の文になる
+- 文の中の `{0}`、`{1}` には、Spring が値を入れる（例：存在しないパスなら、そのパス）。値の意味は、例外ごとに決まっている
+- 日本語にしたもの：壊れたJSON、存在しないパス、許可されていない操作（405）、値の形が違う（IDが数字でない、日付が不正）、受け付けないデータの形式（415）
+- **`title`（`Not Found` など）は、英語のまま**にした。番号の標準の名前で、プログラムが読む目印にもなるため
+- つまずき：値の形が違うときのキーは、実際の例外 `MethodArgumentTypeMismatchException` ではなく、**親クラス `TypeMismatchException`** の名前だった。最初に実際の例外名で書いたら、英語のままだった。**テストが失敗して気づけた**。キーは、書いて確かめるまで分からないことがある
+- 文の中に `'`（アポストロフィ）を書くと、`''` と2つ書かないと消える決まり（`MessageFormat` の規則）。日本語では「」を使えば、気にしなくてよい
+- 文字コードは UTF-8（Spring Boot の既定）。日本語を直接書ける
+
 ### 守る仕組み（ArchUnit）
 `LayerDependencyTests` に、2つの規則を足した。
 - Service は、`org.springframework.web..` と `org.springframework.http..`（`ResponseStatusException`、`HttpStatus` など）に依存しない
 - `exception` パッケージは、ほかの層に依存しない（どの層からも使える、ただの例外）
 
 ### テスト
-- `ErrorResponseApiTests`（9件）：404・400・405・413 の本文が、`application/problem+json` で、`status`・`title`・`detail` を持つこと。検査エラーの `errors`
+- `ErrorResponseApiTests`（14件）：404・400・405・413 の本文が、`application/problem+json` で、`status`・`title`・`detail` を持つこと。検査エラーの `errors`。Spring 標準の例外の `detail` が日本語であること（5件）
 - `UnexpectedErrorTests`（2件）：わざと壊れる窓口（テストの中だけにある）で、500 の本文に内部の情報が出ないこと、ログに原因が残ること。Spring もDBも起動しない、軽いテスト（`MockMvcBuilders.standaloneSetup`）。ログは `OutputCaptureExtension` で読み取る
 - **先にテストを書いて、失敗を確かめた**：本文の形のテストは、直す前は9件とも「`Content-Type` が付いていない」で失敗した。状態コードの確認は先に通っていたので、「番号は今も正しく、変わるのは本文の形だけ」と分かった。既存のテストは、番号だけを見ているので、置き換えのあとも、そのまま通る（＝動きが変わっていない証拠）
 
@@ -569,4 +579,4 @@ DBのコンテナを止めて、`GET /api/cards` を呼ぶと、本物の 500 �
 1. バックエンドを起動して、`Invoke-WebRequest http://localhost:8080/api/cards/999999` を実行する（エラーになる）。ブラウザで開くか、`curl -i http://localhost:8080/api/cards/999999` で、`Content-Type: application/problem+json` と本文を見る
 2. `curl -i -X POST -H "Content-Type: application/json" -d "{\"title\":\" \",\"columnId\":1}" http://localhost:8080/api/cards` で、`errors` に理由が入ることを見る
 3. `ApiExceptionHandler` の `handleNotFound` を探し、`NotFoundException` が、どこで投げられているか（`BoardService`）を、たどってみる
-4. 壊れたJSON（`-d "{"`）や、存在しないパス（`/api/nothing`）の `detail` は、英語のまま。これは Spring 標準の文言。日本語にするには、どうすればよいか調べてみる（`MessageSource` の `problemDetail.…`）
+4. `messages.properties` を開き、`problemDetail.…` のキーと、`{0}` の意味を読む。ブラウザで `http://localhost:8080/api/nothing` を開いて、日本語の `detail` を見る。`messages.properties` の文を書き換えて、バックエンドを再起動し、変わるか確かめる

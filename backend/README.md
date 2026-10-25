@@ -10,7 +10,7 @@
 | ビルドツール | Gradle 9.8.1（`gradlew` が自動で取得する） |
 | データベース接続 | Spring Data JPA ＋ PostgreSQL（Docker で起動） |
 | テスト | JUnit ＋ MockMvc ＋ Testcontainers（使い捨ての PostgreSQL） |
-| 静的チェック | Checkstyle（書き方）、SpotBugs（バグになりやすい書き方）、JaCoCo（カバレッジ）。規則は `config/` |
+| 静的チェック | Checkstyle（書き方）、SpotBugs（バグになりやすい書き方）、JaCoCo（カバレッジ）。規則は `config/`。層の依存の向き（controller → service → repository → entity）は、ArchUnit のテスト `LayerDependencyTests` で守る |
 
 ## 必要なもの
 - JDK 25（Gradle は別にインストールしなくてよい）

@@ -16,8 +16,8 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.example.taskmanagement.dto.BackgroundImageData;
 import com.example.taskmanagement.dto.BackgroundImageResponse;
-import com.example.taskmanagement.entity.UserBackgroundImage;
 import com.example.taskmanagement.service.BackgroundImageService;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -42,12 +42,12 @@ public class BackgroundImageController {
 	// 画像そのもの（JPEG）。登録（置き換え）の日時を ETag にして、変わっていなければ、送り直さない（304）
 	@GetMapping("/{slot}")
 	public ResponseEntity<byte[]> get(@PathVariable String slot) {
-		UserBackgroundImage image = imageService.find(slot);
+		BackgroundImageData image = imageService.find(slot);
 		return ResponseEntity.ok()
 				.contentType(MediaType.IMAGE_JPEG)
-				.eTag("\"" + image.getUpdatedAt().toEpochMilli() + "\"")
+				.eTag("\"" + image.updatedAt().toEpochMilli() + "\"")
 				.cacheControl(CacheControl.noCache())
-				.body(image.getImage());
+				.body(image.image());
 	}
 
 	// 登録（置き換え）。本文は、JPEGのバイト列そのもの

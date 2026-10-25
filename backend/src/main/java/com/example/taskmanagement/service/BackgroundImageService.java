@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.example.taskmanagement.dto.BackgroundImageData;
 import com.example.taskmanagement.dto.BackgroundImageResponse;
 import com.example.taskmanagement.entity.UserBackgroundImage;
 import com.example.taskmanagement.repository.UserBackgroundImageRepository;
@@ -28,11 +29,18 @@ public class BackgroundImageService {
 
 	@Transactional(readOnly = true)
 	public List<BackgroundImageResponse> findAll() {
-		return imageRepository.findAllSummaries();
+		return imageRepository.findAllByOrderBySlot().stream()
+				.map(summary -> new BackgroundImageResponse(summary.getSlot(), summary.getUpdatedAt())).toList();
 	}
 
+	// 画像そのもの。Entity は Controller に渡さず、専用の型（BackgroundImageData）にして返す
 	@Transactional(readOnly = true)
-	public UserBackgroundImage find(String slot) {
+	public BackgroundImageData find(String slot) {
+		UserBackgroundImage found = findEntity(slot);
+		return new BackgroundImageData(found.getImage(), found.getUpdatedAt());
+	}
+
+	private UserBackgroundImage findEntity(String slot) {
 		checkSlot(slot);
 		return imageRepository.findById(slot)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "画像が登録されていません: " + slot));
@@ -55,7 +63,7 @@ public class BackgroundImageService {
 	// 登録した画像を消す（標準の画像に戻る）
 	@Transactional
 	public void delete(String slot) {
-		imageRepository.delete(find(slot));
+		imageRepository.delete(findEntity(slot));
 	}
 
 	// 割り当て先は、青空・夕焼け・星空だけ

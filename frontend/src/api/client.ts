@@ -132,7 +132,8 @@ export function uploadBackgroundImage(slot: UserImageSlot, jpeg: Blob): Promise<
     { method: 'PUT', headers: { 'Content-Type': 'image/jpeg' }, body: jpeg },
     {
       badRequest: '画像を登録できませんでした。別の画像を選んでください。',
-      tooLarge: '画像のファイルサイズが大きすぎて、登録できませんでした（5MBまで）。画像を圧縮するか、別の画像を選んでください。',
+      tooLarge:
+        '画像のファイルサイズが大きすぎて、登録できませんでした（5MBまで）。画像を圧縮するか、別の画像を選んでください。',
     },
   )
 }

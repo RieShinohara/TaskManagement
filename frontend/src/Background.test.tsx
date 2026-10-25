@@ -27,7 +27,10 @@ function mockApi(initial: Background = 'sky', failPut = false) {
       }
       return Promise.resolve({ ok: true, json: async () => ({ background: current }) } as Response)
     }
-    return Promise.resolve({ ok: true, json: async () => (url.startsWith('/api/columns') ? columns : cards) } as Response)
+    return Promise.resolve({
+      ok: true,
+      json: async () => (url.startsWith('/api/columns') ? columns : cards),
+    } as Response)
   })
   vi.stubGlobal('fetch', fn)
   return fn
@@ -255,7 +258,10 @@ test('矢印キーで、フォーカスだけが動く（端では、反対の�
 test('Tab の止まる選択肢は、いまのフォーカスの1つだけ（矢印キーで動くと、止まる場所も動く）', async () => {
   const { user } = await setup('sky')
   const dialog = await openByKeyboard(user)
-  const stops = () => within(dialog).getAllByRole('radio').filter((r) => r.tabIndex === 0)
+  const stops = () =>
+    within(dialog)
+      .getAllByRole('radio')
+      .filter((r) => r.tabIndex === 0)
 
   expect(stops()).toEqual([radio('青空')])
   await user.keyboard('{ArrowDown}')

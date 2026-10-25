@@ -21,7 +21,6 @@ export function DuePicker({ value, today, onChange }: Props) {
   // マウスで開いたときは、入力欄から、フォーカスを奪わない（日付を選んだあと、Enter でカードを追加できるように）
   const [openedByKeyboard, setOpenedByKeyboard] = useState(false)
 
-
   return (
     <>
       <button

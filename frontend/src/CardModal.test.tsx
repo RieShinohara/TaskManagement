@@ -13,7 +13,15 @@ const columns: Column[] = [
 ]
 
 const cards: Card[] = [
-  { id: 1, title: '牛乳を買う', description: '2パック', color: 'none', dueDate: '2000-01-01', columnId: 1, position: 1 },
+  {
+    id: 1,
+    title: '牛乳を買う',
+    description: '2パック',
+    color: 'none',
+    dueDate: '2000-01-01',
+    columnId: 1,
+    position: 1,
+  },
   { id: 2, title: '部屋の掃除', description: null, color: 'blue', dueDate: null, columnId: 1, position: 0 },
 ]
 

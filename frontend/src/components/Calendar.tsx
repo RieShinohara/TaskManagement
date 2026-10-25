@@ -1,12 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
-import {
-  endOfWeek,
-  monthGrid,
-  shiftDate,
-  shiftMonthOfDate,
-  startOfWeek,
-  yearMonthOf,
-} from '../lib/calendar'
+import { endOfWeek, monthGrid, shiftDate, shiftMonthOfDate, startOfWeek, yearMonthOf } from '../lib/calendar'
 import { wrapTabFocus } from '../lib/focusTrap'
 
 type Props = {

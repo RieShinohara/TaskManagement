@@ -37,7 +37,7 @@ SpotBugs の `EI_EXPOSE_REP` / `EI_EXPOSE_REP2`（9 件）：リストを持つ 
 | B6 | 中 | `SettingService` | 取得（GET）が、なければ作る（書き込み）を兼ねている。同時に初回アクセスがあると衝突するおそれがある | 起動時に作る（`DataInitializer`）だけにして、取得は読み取り専用にする | |
 | B7 | 中 | `BoardService.moveCard` | 同時に動かしたときの排他制御がない。列のカード全部を毎回更新する | 楽観ロック（`@Version`）を検討。1 人用なので、優先度は低めでもよい | |
 | B8 | 中 | `BackupService`（読み込み） | カードを 1 件ずつ INSERT する（自動採番のため、まとめて INSERT できない）。最大 1 万枚で遅くなる。JSON 本文の大きさの上限もない | 採番をシーケンスに変えて、まとめて INSERT。本文の上限を設ける | |
-| B9 | 低 | カードの色の正規表現が 3 か所（`CardCreateRequest`、`CardUpdateRequest`、`BackupCard`） | 重複。色を足すと、直し漏れが起きる | `enum` か共通の定数にする | |
+| B9 | 低 | カードの色の正規表現が 3 か所（`CardCreateRequest`、`CardUpdateRequest`、`BackupCard`） | 重複。色を足すと、直し漏れが起きる | `enum` か共通の定数にする | 対応済み（Issue #106）。`Card.COLOR_PATTERN` と `Card.COLOR_MESSAGE` の定数にして、3つの DTO から使う（背景の `BoardSetting.BACKGROUND_PATTERN` と同じ形）。整理の前後で、同じテスト（6色を受け付ける、それ以外は断る）が通ることを確かめた |
 | B10 | 低 | `POST /api/cards` | `Location` ヘッダがない | `ResponseEntity.created(...)` | |
 | B11 | 低 | `HealthController` | 自作の動作確認 | `spring-boot-starter-actuator` の `/actuator/health` | |
 | B12 | 低 | `application.yml`（`show-sql: true`）、`docker-compose.yml`（5432 を全部に公開） | 常時 SQL を出す。DB のポートが、外にも開く | 開発用の設定に限る。`127.0.0.1:5432:5432` にする | DBのポートは対応済み（Issue #102）。直す前は `0.0.0.0` と `[::]` の全入口で待ち受けていたのを、動かして確かめた。直したあとは `127.0.0.1` だけ。カード20枚の `md5` は前後で同じ、バックエンドも今までどおりつながった。`show-sql` も対応済み（Issue #104）。既定はオフにして、`.env` の `SHOW_SQL=true` でオンにできる。既定ではSQLが出ず、オンにすると出ることを、起動して確かめた |

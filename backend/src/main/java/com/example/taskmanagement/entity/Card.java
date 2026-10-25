@@ -19,6 +19,11 @@ import jakarta.persistence.Table;
 @Table(name = "card", indexes = @Index(name = "idx_card_column_position", columnList = "column_id, position"))
 public class Card {
 
+	// 選べる色。色を足すときは、ここだけ直す（検査は、この定数を使う）
+	public static final String COLOR_PATTERN = "none|red|blue|green|yellow|gray";
+
+	public static final String COLOR_MESSAGE = "色は none / red / blue / green / yellow / gray のどれかです";
+
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
@@ -30,7 +35,7 @@ public class Card {
 	@Column(length = 2000)
 	private String description;
 
-	// none / red / blue / green / yellow / gray
+	// COLOR_PATTERN のどれか
 	@Column(nullable = false)
 	private String color;
 

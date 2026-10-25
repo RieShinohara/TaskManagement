@@ -42,7 +42,7 @@ SpotBugs の `EI_EXPOSE_REP` / `EI_EXPOSE_REP2`（9 件）：リストを持つ 
 | B11 | 低 | `HealthController` | 自作の動作確認 | `spring-boot-starter-actuator` の `/actuator/health` | 対応済み（Issue #110）。公開は `health` だけ。起動して確かめた：DBが動いていれば `UP`（200）、DBを止めると `DOWN`（503。返事まで約30秒かかる）、再起動すると `UP` に戻る。自作は、DBが落ちていても `ok` を返していた |
 | B12 | 低 | `application.yml`（`show-sql: true`）、`docker-compose.yml`（5432 を全部に公開） | 常時 SQL を出す。DB のポートが、外にも開く | 開発用の設定に限る。`127.0.0.1:5432:5432` にする | DBのポートは対応済み（Issue #102）。直す前は `0.0.0.0` と `[::]` の全入口で待ち受けていたのを、動かして確かめた。直したあとは `127.0.0.1` だけ。カード20枚の `md5` は前後で同じ、バックエンドも今までどおりつながった。`show-sql` も対応済み（Issue #104）。既定はオフにして、`.env` の `SHOW_SQL=true` でオンにできる。既定ではSQLが出ず、オンにすると出ることを、起動して確かめた |
 | B13 | 低 | `card.column_id` | 外部キーに索引がない（PostgreSQL は自動で作らない） | `(column_id, position)` の索引を、Flyway の V2 で足す | 対応済み（Issue #92）。カード30万枚の使い捨て DB で測った：「列の最小位置」は約25ms → 約0.07ms。一方、「列の全部を取り出す」はほぼ同じ（約48ms → 約47ms）、10万枚の position の書き換えは約0.5秒 → 約0.9秒（1回ずつの測定）。このアプリ（最大1万枚）では、効果は小さい |
-| B14 | 低 | テスト | テストが同じ DB を共有し、`BackupApiTests` は手で元に戻している。失敗すると、データが残る | `@Transactional` か、`@BeforeEach` で全消去にそろえる | |
+| B14 | 低 | テスト | テストが同じ DB を共有し、`BackupApiTests` は手で元に戻している。失敗すると、データが残る | `@Transactional` か、`@BeforeEach` で全消去にそろえる | **対応しない**（Issue #120）。理由：①`@Transactional` にすると、全体が1つのトランザクションで巻き戻るため、「コミットしたときに初めて起きる失敗」（例：B6 の主キーの重複）が、テストで見えなくなる。テストの本物らしさが下がる ②別スレッドで動く、同時実行のテスト（`SettingApiTests`）は、`@Transactional` にできない ③DB は Testcontainers の使い捨て（毎回新しく作る）で、後始末は `@AfterEach` ですでに動くため、得られるものが小さい。テストは、タイトルの接頭辞で互いに区別する作りで、順番に依存しないように書かれている（読んで判断したもので、順番を変えて実行して確かめてはいない）。見直す条件：後始末の失敗でテストが不安定になったとき |
 | B15 | 前提 | 全体 | 認証と CSRF 対策がない。`POST /api/backup/restore` は全データを入れ替える | 1 人でこの PC だけで使う前提（`non-functional-requirements.md`）を守る。公開する場合は、Spring Security が必要 | |
 
 ### 2.2 フロントエンド

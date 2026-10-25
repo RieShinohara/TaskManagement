@@ -22,6 +22,18 @@ class LayerDependencyTests {
 	static final ArchRule SERVICE_DOES_NOT_USE_CONTROLLER = noClasses().that().resideInAPackage("..service..")
 			.should().dependOnClassesThat().resideInAPackage("..controller..");
 
+	// Service は、HTTP や web の型（ResponseStatusException、HttpStatus など）を知らない。
+	// 「見つからない」などは、業務の例外（exception パッケージ）で表し、HTTP の番号への変換は ApiExceptionHandler が行う
+	@ArchTest
+	static final ArchRule SERVICE_DOES_NOT_USE_WEB_TYPES = noClasses().that().resideInAPackage("..service..")
+			.should().dependOnClassesThat().resideInAnyPackage("org.springframework.web..", "org.springframework.http..");
+
+	// 業務の例外は、ただの例外。どの層も知らない（どの層からも使える）
+	@ArchTest
+	static final ArchRule EXCEPTION_DOES_NOT_USE_OTHER_LAYERS = noClasses().that().resideInAPackage("..exception..")
+			.should().dependOnClassesThat()
+			.resideInAnyPackage("..dto..", "..entity..", "..repository..", "..service..", "..controller..");
+
 	// Repository は、DBを触るだけ。画面とのやり取りの形（DTO）や、上の層を知らない
 	@ArchTest
 	static final ArchRule REPOSITORY_DOES_NOT_USE_UPPER_LAYERS_OR_DTO = noClasses().that().resideInAPackage("..repository..")

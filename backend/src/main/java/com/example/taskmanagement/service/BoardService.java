@@ -5,10 +5,8 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import com.example.taskmanagement.dto.CardCreateRequest;
 import com.example.taskmanagement.dto.CardMoveRequest;
@@ -17,6 +15,7 @@ import com.example.taskmanagement.dto.CardUpdateRequest;
 import com.example.taskmanagement.dto.ColumnResponse;
 import com.example.taskmanagement.entity.BoardColumn;
 import com.example.taskmanagement.entity.Card;
+import com.example.taskmanagement.exception.NotFoundException;
 import com.example.taskmanagement.repository.BoardColumnRepository;
 import com.example.taskmanagement.repository.CardRepository;
 
@@ -48,14 +47,14 @@ public class BoardService {
 	@Transactional(readOnly = true)
 	public CardResponse findCard(Long id) {
 		Card card = cardRepository.findById(id)
-				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "カードが見つかりません: " + id));
+				.orElseThrow(() -> new NotFoundException("カードが見つかりません: " + id));
 		return CardResponse.from(card);
 	}
 
 	@Transactional
 	public CardResponse createCard(CardCreateRequest request) {
 		BoardColumn column = columnRepository.findById(request.columnId())
-				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+				.orElseThrow(() -> new NotFoundException(
 						"列が見つかりません: " + request.columnId()));
 
 		// 新しいカードは、その列の一番上に入る（position が最も小さくなる）
@@ -71,7 +70,7 @@ public class BoardService {
 	@Transactional
 	public CardResponse updateCard(Long id, CardUpdateRequest request) {
 		Card card = cardRepository.findById(id)
-				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "カードが見つかりません: " + id));
+				.orElseThrow(() -> new NotFoundException("カードが見つかりません: " + id));
 		String description = (request.description() == null || request.description().isBlank()) ? null
 				: request.description();
 		card.update(request.title().strip(), description, request.color(), request.dueDate());
@@ -84,9 +83,9 @@ public class BoardService {
 	@Transactional
 	public CardResponse moveCard(Long id, CardMoveRequest request) {
 		Card card = cardRepository.findById(id)
-				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "カードが見つかりません: " + id));
+				.orElseThrow(() -> new NotFoundException("カードが見つかりません: " + id));
 		BoardColumn target = columnRepository.findById(request.columnId())
-				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+				.orElseThrow(() -> new NotFoundException(
 						"列が見つかりません: " + request.columnId()));
 		Long sourceColumnId = card.getColumn().getId();
 
@@ -117,7 +116,7 @@ public class BoardService {
 	@Transactional
 	public List<CardResponse> sortColumnByDue(Long columnId) {
 		BoardColumn column = columnRepository.findById(columnId)
-				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "列が見つかりません: " + columnId));
+				.orElseThrow(() -> new NotFoundException("列が見つかりません: " + columnId));
 		List<Card> cards = new ArrayList<>(cardRepository.findByColumnIdOrderByPositionAscIdAsc(columnId));
 		cards.sort(Comparator.comparing(Card::getDueDate, Comparator.nullsLast(Comparator.naturalOrder())));
 		for (int i = 0; i < cards.size(); i++) {
@@ -130,7 +129,7 @@ public class BoardService {
 	@Transactional
 	public void deleteCard(Long id) {
 		Card card = cardRepository.findById(id)
-				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "カードが見つかりません: " + id));
+				.orElseThrow(() -> new NotFoundException("カードが見つかりません: " + id));
 		cardRepository.delete(card);
 	}
 

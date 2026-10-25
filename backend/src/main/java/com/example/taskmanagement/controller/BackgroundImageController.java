@@ -14,10 +14,10 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 
 import com.example.taskmanagement.dto.BackgroundImageData;
 import com.example.taskmanagement.dto.BackgroundImageResponse;
+import com.example.taskmanagement.exception.PayloadTooLargeException;
 import com.example.taskmanagement.service.BackgroundImageService;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -78,8 +78,8 @@ public class BackgroundImageController {
 		return body;
 	}
 
-	private ResponseStatusException tooLarge() {
-		return new ResponseStatusException(HttpStatus.CONTENT_TOO_LARGE, "画像が大きすぎます（5MBまで）");
+	private PayloadTooLargeException tooLarge() {
+		return new PayloadTooLargeException("画像が大きすぎます（5MBまで）");
 	}
 
 }

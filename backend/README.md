@@ -81,7 +81,11 @@
 | `DELETE /api/background-images/{slot}` | 登録した画像を消す（標準の画像に戻る）。成功は `204` |
 
 返事の番号は、成功が `200`（作ったときは `201`、中身のないときは `204`）。カードを追加（`POST /api/cards`）したときの `201` には、作ったカードの住所（`/api/cards/{id}`）が `Location` ヘッダに付く。失敗は、お願いの内容がおかしいと `400`、見つからないと `404`。
-エラーの本文の形は、Spring Boot の標準のまま（このアプリ独自の形は決めていない）。画面は、本文を読まず、番号で表示する文言を決めている。
+エラーの本文は、どれも標準の `ProblemDetail`（RFC 9457。`Content-Type` は `application/problem+json`）の形。`status`（番号）、`title`（番号の名前）、`detail`（理由）、`instance`（どの住所で起きたか）が入る。入力の検査に失敗したときは、`errors`（項目名 → 理由）も入る。想定外のエラー（`500`）は、原因をログに残し、本文には一般的な文言だけを返す。エラーの形は、`ApiExceptionHandler`（`controller/`）が1か所で決める。画面は、本文を読まず、番号で表示する文言を決めている。
+
+```json
+{"detail":"カードが見つかりません: 999999","instance":"/api/cards/999999","status":404,"title":"Not Found"}
+```
 
 絞り込み（どれも省略できる。組み合わせられる）:
 
@@ -202,11 +206,12 @@ docker compose exec db psql -U taskmanagement -d taskmanagement -f /tmp/sample-d
 ## ソースの層
 | 層 | フォルダ | 役割 |
 |---|---|---|
-| Controller | `controller/` | APIの窓口。お願いを受け取り、結果をJSONで返す |
+| Controller | `controller/` | APIの窓口。お願いを受け取り、結果をJSONで返す。エラーの返し方も、ここ（`ApiExceptionHandler`）で決める |
 | Service | `service/` | 業務の処理（新しいカードを一番上に入れる、並び替え、バックアップの読み込み、など） |
 | Repository | `repository/` | DBの読み書き（Spring が自動で用意する） |
 | Entity | `entity/` | テーブルに対応するクラス |
 | DTO | `dto/` | APIでやりとりするJSONの形 |
+| 例外 | `exception/` | 業務の例外（`NotFoundException` など）。Service が投げ、`ApiExceptionHandler` が番号と本文に変える |
 
 ## フォルダ構成
 ```

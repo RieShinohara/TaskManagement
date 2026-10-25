@@ -497,7 +497,7 @@ Service      sortColumnByDue：列を探す（なければ404）→ 列のカー
 - **本文は、JPEGのバイト列そのもの**。JSONに包んだり、`multipart`（ファイルの送信の形式）にしたりしないので、サーバー側が簡単。空の本文は、JPEGの検査で400になる
 - **大きさは、「読む前」に調べる**：最初は `@RequestBody byte[] image` と書いていた。これは「本文を**全部**読み込んで、`byte[]` にして渡す」ので、5MBの検査をする前に、巨大な本文（300MBで試した）が、全部メモリに載ってしまった（品質チェックの B2）。そこで、`HttpServletRequest` を受け取り、①送られてくる大きさの申告（`Content-Length`）が5MBを超えていれば、本文に触れずに413 ②申告がない送り方や、申告が嘘のときのために、`readNBytes(5MB + 1)` で、上限より1バイト多くまで読んで、やめる、の2段構えにした。直したあと、300MBを送ると、受け取るのは約0.3MB（申告あり）〜5.6MB（申告なし）で、すぐ413が返る（直す前は、314,572,803バイトを全部受け取ってから400）
 - **「読んだ量」を数えるテスト**：巨大な本文を本当に送らずに、読んだバイト数を数える偽のリクエスト（`MockHttpServletRequest` を継いだもの）で、「申告が大きいときは0バイトしか読まない」「申告がなくても、上限+1バイトで読むのをやめる」を確かめた。Springを起動しない、ふつうの単体テスト（速い）
-- **一覧では、画像を読まない**：`select new …(i.slot, i.updatedAt)` という検索で、画像の列を読まずに、`slot` と日時だけを取る。画像は大きいので、一覧のたびに読むのは無駄
+- **一覧では、画像を読まない**：戻り値を、`slot` と日時だけの型（インターフェース射影 `Summary`）にすると、Spring Data が、その2列だけを取り出す（画像の列は読まない。品質チェック B4 で、JPQL の文字列から射影に変えた）。画像は大きいので、一覧のたびに読むのは無駄
 - **ETag で、送り直しを減らす**：画像を返すとき、登録（置き換え）の日時から作った `ETag` を付ける。ブラウザは、2回目から `If-None-Match` を付けて聞き、変わっていなければ **304**（本文なし）が返る。`Cache-Control: no-cache` は「使う前に、必ず聞く」という意味（保存しないという意味ではない）
 - **日時は、ミリ秒にそろえる**：`Instant.now()` はナノ秒まであるが、DBは精度が違う（マイクロ秒）。登録直後の返事と、DBから読んだ値が、少しずれてしまう。画面は日時を目印に使うので、`truncatedTo(ChronoUnit.MILLIS)` で、ミリ秒までにそろえた（テストで、同じ値になることを確かめた）
 - **バックアップには入れない**：仕様どおり。バックアップを書き出しても画像は入らず、読み込みで消えるのはカードと列だけ（画像は別の表）。テストで確かめた
@@ -512,3 +512,61 @@ Service      sortColumnByDue：列を探す（なければ404）→ 列のカー
 4. PNG（や、テキストファイル）を送って、`400` になるか確かめる。`/api/background-images/auto` に送って、`404` になるか確かめる
 5. `SELECT slot, pg_typeof(image), length(image) FROM user_background_image;` で、`bytea` で入っていることを確かめる
 6. `-Method Delete` で消して、`GET` が `404` になるか確かめる
+
+## 19. エラーの返し方：業務の例外と ProblemDetail（品質チェック B3）
+### 困っていたこと
+- Service（業務の層）が、`ResponseStatusException`（「404 で返して」と HTTP の番号を指定する例外）を、13か所で投げていた。Service が HTTP の番号を知っているのは、層の役割分担としておかしい（5章で学んだ「役割ごとに分ける」と逆）
+- エラーの本文の形が、場面ごとにばらばらだった（Spring Boot の標準の形だけ。検査に失敗した理由も、本文に入っていなかった）
+
+### 今の作り
+```
+Service      「見つからない」を、業務の言葉の例外で投げる   throw new NotFoundException("カードが見つかりません: 5")
+  ↓
+ApiExceptionHandler（@RestControllerAdvice）
+             例外を受け取り、HTTP の番号と本文に変える     404 ＋ ProblemDetail
+  ↓
+画面         404 の返事を受け取る
+```
+
+| 例外（`exception/`） | 意味 | 返事の番号 |
+|---|---|---|
+| `NotFoundException` | 探しているものがない（カード、列、画像、割り当て先） | 404 |
+| `InvalidRequestException` | お願いの内容がだめ（JPEGでない、カードが多すぎる） | 400 |
+| `PayloadTooLargeException` | 大きすぎる（画像は5MBまで） | 413 |
+
+- **Service は、番号を知らない**。「何が起きたか」だけを例外で伝える。番号への変換は、`ApiExceptionHandler` が1か所で行う。番号の決まりを変えたいときも、ここだけ直せばよい
+- **`@RestControllerAdvice`**：すべての Controller の例外を、まとめて受け取る係。`@ExceptionHandler(NotFoundException.class)` と書いたメソッドが、その例外のときの返事を決める
+- **`ProblemDetail`（RFC 9457）**：エラーの本文の、世界共通の決まった形。`Content-Type` は `application/problem+json`。項目は `status`（番号）、`title`（番号の名前）、`detail`（理由）、`instance`（どの住所で起きたか）
+
+```json
+{"detail":"カードが見つかりません: 999999","instance":"/api/cards/999999","status":404,"title":"Not Found"}
+```
+
+- **`ResponseEntityExceptionHandler` を継ぐ**：Spring 標準の例外（JSON が壊れている、許可されていない操作、存在しないパス）も、まとめて `ProblemDetail` になる
+- **検査の失敗には、`errors` を足した**：`@Valid` の検査に失敗したとき、どの項目が、なぜだめかを、本文で読める
+
+```json
+{"detail":"入力内容に誤りがあります。","status":400,"title":"Bad Request","errors":{"title":"タイトルは必須です","color":"色は none / red / blue / green / yellow / gray のどれかです"}}
+```
+
+- **想定外のエラー（500）**：プログラムの不具合や、DBの故障。**原因はログに残し**（スタックトレースつき）、本文には「サーバーでエラーが起きました」という一般的な文言だけを返す。例外のメッセージには、内部の情報（SQL、パスワードの断片など）が入ることがあり、外に見せるのは危ないため
+- **画面は、変えていない**：画面は、返事の番号だけを見て、本文は読んでいない。だから、本文の形を変えても、壊れない
+
+### 守る仕組み（ArchUnit）
+`LayerDependencyTests` に、2つの規則を足した。
+- Service は、`org.springframework.web..` と `org.springframework.http..`（`ResponseStatusException`、`HttpStatus` など）に依存しない
+- `exception` パッケージは、ほかの層に依存しない（どの層からも使える、ただの例外）
+
+### テスト
+- `ErrorResponseApiTests`（9件）：404・400・405・413 の本文が、`application/problem+json` で、`status`・`title`・`detail` を持つこと。検査エラーの `errors`
+- `UnexpectedErrorTests`（2件）：わざと壊れる窓口（テストの中だけにある）で、500 の本文に内部の情報が出ないこと、ログに原因が残ること。Spring もDBも起動しない、軽いテスト（`MockMvcBuilders.standaloneSetup`）。ログは `OutputCaptureExtension` で読み取る
+- **先にテストを書いて、失敗を確かめた**：本文の形のテストは、直す前は9件とも「`Content-Type` が付いていない」で失敗した。状態コードの確認は先に通っていたので、「番号は今も正しく、変わるのは本文の形だけ」と分かった。既存のテストは、番号だけを見ているので、置き換えのあとも、そのまま通る（＝動きが変わっていない証拠）
+
+### 実際に確かめたこと
+DBのコンテナを止めて、`GET /api/cards` を呼ぶと、本物の 500 が `ProblemDetail`（一般的な文言だけ）で返り、ログには `CannotCreateTransactionException`（原因）が残った。
+
+### やってみよう
+1. バックエンドを起動して、`Invoke-WebRequest http://localhost:8080/api/cards/999999` を実行する（エラーになる）。ブラウザで開くか、`curl -i http://localhost:8080/api/cards/999999` で、`Content-Type: application/problem+json` と本文を見る
+2. `curl -i -X POST -H "Content-Type: application/json" -d "{\"title\":\" \",\"columnId\":1}" http://localhost:8080/api/cards` で、`errors` に理由が入ることを見る
+3. `ApiExceptionHandler` の `handleNotFound` を探し、`NotFoundException` が、どこで投げられているか（`BoardService`）を、たどってみる
+4. 壊れたJSON（`-d "{"`）や、存在しないパス（`/api/nothing`）の `detail` は、英語のまま。これは Spring 標準の文言。日本語にするには、どうすればよいか調べてみる（`MessageSource` の `problemDetail.…`）

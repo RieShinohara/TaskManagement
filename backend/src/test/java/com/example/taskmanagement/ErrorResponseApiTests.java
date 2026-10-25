@@ -1,5 +1,7 @@
 package com.example.taskmanagement;
 
+import static org.hamcrest.Matchers.endsWith;
+import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -84,6 +86,44 @@ class ErrorResponseApiTests {
 		expectProblem(mockMvc.perform(put("/api/background-images/sky").contentType(MediaType.IMAGE_JPEG)
 				.content(new byte[BackgroundImageService.MAX_BYTES + 1])), 413, "Content Too Large")
 				.andExpect(jsonPath("$.detail").value("画像が大きすぎます（5MBまで）"));
+	}
+
+	// Spring 標準の例外の detail は、messages.properties の日本語（キーは「problemDetail.＋例外のクラス名」）。
+	// title（Not Found など）は、番号の標準の名前なので、英語のまま
+	@Test
+	void 壊れたJSONの理由は日本語() throws Exception {
+		expectProblem(mockMvc.perform(post("/api/cards").contentType(MediaType.APPLICATION_JSON).content("{")), 400,
+				"Bad Request")
+				.andExpect(jsonPath("$.detail").value("リクエストの本文を読み取れません。JSONの形や、値の型を確かめてください。"));
+	}
+
+	@Test
+	void 存在しないパスの理由は日本語() throws Exception {
+		expectProblem(mockMvc.perform(get("/api/nothing")), 404, "Not Found")
+				.andExpect(jsonPath("$.detail").value("指定された住所は見つかりません: api/nothing"));
+	}
+
+	@Test
+	void 許可されていない操作の理由は日本語() throws Exception {
+		expectProblem(mockMvc.perform(delete("/api/columns")), 405, "Method Not Allowed")
+				.andExpect(jsonPath("$.detail").value("この住所では、「DELETE」の操作は使えません。"));
+	}
+
+	@Test
+	void 値の形が違う理由は日本語_どの項目の_どの値かが分かる() throws Exception {
+		expectProblem(mockMvc.perform(get("/api/cards/abc")), 400, "Bad Request")
+				.andExpect(jsonPath("$.detail").value("id の値「abc」は、正しい形ではありません。"));
+		expectProblem(mockMvc.perform(get("/api/cards").param("dueBefore", "not-a-date")), 400, "Bad Request")
+				.andExpect(jsonPath("$.detail").value("dueBefore の値「not-a-date」は、正しい形ではありません。"));
+	}
+
+	@Test
+	void 受け付けないデータの形式の理由は日本語() throws Exception {
+		expectProblem(mockMvc.perform(post("/api/cards").contentType(MediaType.TEXT_PLAIN).content(new byte[] { 120 })), 415,
+				"Unsupported Media Type")
+				// Spring は、文字コードを足した形（text/plain;charset=UTF-8）で値を渡す。実際の送信（curl）でも同じ。前半と後半だけを確かめる
+				.andExpect(jsonPath("$.detail").value(startsWith("このデータの形式（text/plain")))
+				.andExpect(jsonPath("$.detail").value(endsWith("）は受け付けていません。")));
 	}
 
 	// 状態コード・Content-Type・本文の status と title を確かめる（ProblemDetail の決まった項目）

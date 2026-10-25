@@ -81,7 +81,7 @@
 | `DELETE /api/background-images/{slot}` | 登録した画像を消す（標準の画像に戻る）。成功は `204` |
 
 返事の番号は、成功が `200`（作ったときは `201`、中身のないときは `204`）。カードを追加（`POST /api/cards`）したときの `201` には、作ったカードの住所（`/api/cards/{id}`）が `Location` ヘッダに付く。失敗は、お願いの内容がおかしいと `400`、見つからないと `404`。
-エラーの本文は、どれも標準の `ProblemDetail`（RFC 9457。`Content-Type` は `application/problem+json`）の形。`status`（番号）、`title`（番号の名前）、`detail`（理由）、`instance`（どの住所で起きたか）が入る。入力の検査に失敗したときは、`errors`（項目名 → 理由）も入る。想定外のエラー（`500`）は、原因をログに残し、本文には一般的な文言だけを返す。エラーの形は、`ApiExceptionHandler`（`controller/`）が1か所で決める。画面は、本文を読まず、番号で表示する文言を決めている。
+エラーの本文は、どれも標準の `ProblemDetail`（RFC 9457。`Content-Type` は `application/problem+json`）の形。`status`（番号）、`title`（番号の名前）、`detail`（理由）、`instance`（どの住所で起きたか）が入る。入力の検査に失敗したときは、`errors`（項目名 → 理由）も入る。想定外のエラー（`500`）は、原因をログに残し、本文には一般的な文言だけを返す。Spring 標準の例外（壊れたJSON、存在しないパス、許可されていない操作など）の `detail` も、日本語（`src/main/resources/messages.properties`）。`title`（`Not Found` など）は、番号の標準の名前なので、英語のまま。エラーの形は、`ApiExceptionHandler`（`controller/`）が1か所で決める。画面は、本文を読まず、番号で表示する文言を決めている。
 
 ```json
 {"detail":"カードが見つかりません: 999999","instance":"/api/cards/999999","status":404,"title":"Not Found"}

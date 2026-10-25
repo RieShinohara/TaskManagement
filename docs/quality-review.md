@@ -33,7 +33,7 @@ SpotBugs の `EI_EXPOSE_REP` / `EI_EXPOSE_REP2`（9 件）：リストを持つ 
 | B2 | 中〜高 | `BackgroundImageController.put`（`@RequestBody byte[]`） | 本文を全部メモリに読んでから 5MB を判定していた。300MB を送ると、全部（314,572,803 バイト）を受け取ってから 400 を返すことを、動かして確かめた。超過時のコードも 400（標準は 413） | `Content-Length` を先に検査し、申告がなくても上限+1 バイトで読むのをやめる。超過は 413 | 対応済み（Issue #83）。直したあと、300MB は約 0.3MB（申告あり）〜5.6MB（申告なし）で 413。画面の文言も、Issue #84 で対応済み |
 | B3 | 中 | `backend/src` 全体（`@RestControllerAdvice` が 0 件。`ResponseStatusException` が 15 か所） | Service が web 層の型（`ResponseStatusException`）を投げている。エラー本文の形が、Spring 標準のまま | 業務の例外（例：カードが見つからない）を作り、`@RestControllerAdvice` で `ProblemDetail`（RFC 9457）にそろえる | |
 | B4 | 中 | `UserBackgroundImageRepository`（DTO を import）、`BackgroundImageController`・`BackgroundImageService`（Entity を直接扱う） | 層の依存が逆向き。JPQL に DTO のクラス名を文字列で埋め込んでいる | インターフェース射影にする。Service は Entity でなく専用の型を返す。ArchUnit で再発を防ぐ | |
-| B5 | 中 | `application.yml`（`open-in-view` の指定なし） | 既定の true で、起動時に警告が出る。DB の接続を長く持つ | `spring.jpa.open-in-view: false` を明示 | |
+| B5 | 中 | `application.yml`（`open-in-view` の指定なし） | 既定の true で、起動時に警告が出る。DB の接続を長く持つ | `spring.jpa.open-in-view: false` を明示 | 対応済み（Issue #100）。設定を足し、遅延読み込みの失敗が出ないこと（既存のAPIテスト全部）を確かめた |
 | B6 | 中 | `SettingService` | 取得（GET）が、なければ作る（書き込み）を兼ねている。同時に初回アクセスがあると衝突するおそれがある | 起動時に作る（`DataInitializer`）だけにして、取得は読み取り専用にする | |
 | B7 | 中 | `BoardService.moveCard` | 同時に動かしたときの排他制御がない。列のカード全部を毎回更新する | 楽観ロック（`@Version`）を検討。1 人用なので、優先度は低めでもよい | |
 | B8 | 中 | `BackupService`（読み込み） | カードを 1 件ずつ INSERT する（自動採番のため、まとめて INSERT できない）。最大 1 万枚で遅くなる。JSON 本文の大きさの上限もない | 採番をシーケンスに変えて、まとめて INSERT。本文の上限を設ける | |

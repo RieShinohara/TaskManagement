@@ -17,5 +17,7 @@ spring:
     hibernate:
       # テーブルは作らない。Entity（Javaのクラス）とテーブルが合っているかを、起動のときに確かめるだけ（ずれていたら、起動に失敗する）
       ddl-auto: validate
+    # 画面への返事を作り終えるまで、DBの接続を持ち続ける仕組み（既定は true）を切る。DBを使うのは Service の中だけにして、接続を早く返す
+    open-in-view: false
     # 実行されるSQLをログに出す（学習用）
     show-sql: true

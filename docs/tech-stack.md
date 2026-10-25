@@ -42,7 +42,7 @@
 | Node.js | **24 LTS（24.20.0）**（確定：2026-10-15） | 画面側の開発に必要。Node 26 は 2026-10-28 に LTS 入り予定だが、今は 24 が現役のLTS |
 | 画面側のバージョン | **React 19.3.1、TypeScript 7.0.2、Vite 8.3.4、Tailwind CSS 4.3.3、Vitest 5.0.4**（確定：2026-10-15。すべてその時点の最新版） | `npm create vite` のテンプレートは TypeScript 6.0 だったが、7.0.2 に上げて、ビルド・テストが通ることを確認した |
 | 画面側の静的チェック | oxlint（Vite のテンプレートの標準）。アクセシビリティ（jsx-a11y）と、警告を許さない設定（`--deny-warnings`）を追加（2026-10-21） | ESLint ではなく、テンプレートの標準に合わせた |
-| サーバー側の静的チェック | Checkstyle（書き方）、SpotBugs（バグになりやすい書き方）、JaCoCo（テストのカバレッジ）。`gradlew check` で実行（2026-10-21） | 規則は `backend/config/` に置く。Java 25 で動くことを確認した |
+| サーバー側の静的チェック | Checkstyle（書き方）、SpotBugs（バグになりやすい書き方）、JaCoCo（テストのカバレッジ）。`gradlew check` で実行（2026-10-21） | 規則は `backend/config/` に置く。Java 25 で動くことを確認した。層の依存の向きは、ArchUnit のテスト（`LayerDependencyTests`）で守る（2026-10-25） |
 | 画面からAPIへの接続 | 開発中は Vite のプロキシ（`/api` → `localhost:8080`） | CORS の設定が要らず、バックエンドを変えずに済む |
 | 開発用のPostgreSQL | **Docker（Docker Desktop）で起動。PostgreSQL 18**（確定：2026-10-13） | Windowsを汚さず、起動・停止・削除が1行でできる |
 | テスト | JUnit ＋ Testcontainers（サーバー側）、Vitest（画面側） | テストのときだけ、使い捨てのPostgreSQLをDockerで起動する |

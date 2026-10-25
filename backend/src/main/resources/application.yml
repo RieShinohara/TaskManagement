@@ -1,3 +1,7 @@
+server:
+  # この PC（127.0.0.1）からだけつなげる。指定しないと、全部の入口で待ち受けて、同じネットワークの他の PC からも、
+  # ログインなしで、全データの書き出し・入れ替え（/api/backup）ができてしまう。このアプリは、この PC の中だけで使う前提
+  address: 127.0.0.1
 spring:
   application:
     name: taskmanagement

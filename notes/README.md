@@ -10,7 +10,7 @@ AIエンジニア養成コースの学習記録です。Claude Codeと一緒に�
 | [04-glossary.md](04-glossary.md) | 用語集 |
 | [05-backend-guide.md](05-backend-guide.md) | バックエンド（Java + Spring Boot、PostgreSQL、Docker）の仕組みと、動かし方。機能ごとのAPIの作り方 |
 | [06-frontend-guide.md](06-frontend-guide.md) | フロントエンド（React + TypeScript + Vite）の仕組みと、画面がデータを表示するまでの流れ。機能ごとの画面の作り方 |
-| [07-quality-check.md](07-quality-check.md) | 品質チェック：静的チェック（lint）の道具と考え方。機能が完成したあとの点検の進め方 |
+| [07-quality-check.md](07-quality-check.md) | 品質チェック：静的チェック（lint）の道具と考え方。整形（Prettier）と CI（自動チェック）。機能が完成したあとの点検の進め方 |
 
 ## 読む順番のおすすめ
 1. [01](01-git-and-github.md)：作業の進め方（Issue → ブランチ → PR）。これを守って、すべて作った

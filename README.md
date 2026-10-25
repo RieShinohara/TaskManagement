@@ -62,7 +62,7 @@ AIエンジニア養成コースの初級課題として、開発するリポジ
 | サーバー（テスト） | `.\gradlew.bat test`（Docker Desktop の起動が必要） | `backend/` |
 | サーバー（テスト＋静的チェック） | `.\gradlew.bat check`（テスト、Checkstyle、SpotBugs、カバレッジの計測） | `backend/` |
 | 画面 | `npm test` | `frontend/` |
-| 画面の静的チェック／ビルド | `npm run lint` ／ `npm run build` | `frontend/` |
+| 画面の静的チェック／ビルド | `npm run lint` ／ `npm run format:check`（整形の確認。直すときは `npm run format`） ／ `npm run build` | `frontend/` |
 
 **CI（自動チェック）**：PR を作ると（と、main に入ったあとにも）、GitHub が、上のテストと静的チェックを自動で走らせる（`.github/workflows/ci.yml`）。PR の画面に ✓（成功）か ✗（失敗）が出る。✗ のときは、「Details」から原因が見られる（サーバー側は、失敗したときのレポートも、7日間残る）。手元で確認する手間は、減らない（見た目の確認など、CI にできないことがある）が、確認の抜けに気づける。
 

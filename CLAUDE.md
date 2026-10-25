@@ -74,7 +74,8 @@ Refs #23
 - **変更は、必ず PR で、main に入れる。** PR は、`gh pr create` で作る
 - タイトル：日本語。何をしたかが分かるように書く
 - 本文に、次を書く：`## 内容`、`## 確認したこと`（実行したテストや、動作確認の結果）、**`Closes #Issue番号`**
-- PR を作る前に、**テスト・静的チェック・ビルドを実行**し、結果を `## 確認したこと` に書く（バックエンド：`.\gradlew.bat check`（テストと静的チェック）、画面：`npm test` ／ `npm run lint` ／ `npm run build`。文書だけの PR は、リンク切れなどの確認）
+- PR を作る前に、**テスト・静的チェック・ビルドを実行**し、結果を `## 確認したこと` に書く（バックエンド：`.\gradlew.bat check`（テストと静的チェック）、画面：`npm test` ／ `npm run lint` ／ `npm run format:check` ／ `npm run build`。文書だけの PR は、リンク切れなどの確認）
+- PR を作ると、CI（GitHub Actions。`.github/workflows/ci.yml`）が、同じ確認（サーバーの `check`、画面の lint・整形・test・build）を自動で走らせる。✗（失敗）が出たら、「Details」で原因を見て直す。**CI は、手元の確認の代わりではない**（見た目の確認など、CI にできないことがある）。`## 確認したこと` には、今までどおり、手元で実行した結果を書く。「CI が通らないとマージできない」設定（必須チェック）は、まだしていない
 - ブラウザで見ないと分からないこと（見た目、ファイルの保存・選択など）は、「**ユーザーの確認が必要**」と、PRの本文に書く。Claude Code が確かめていないことを、確認済みと書かない
 - 本文の最後に、システムから指示された `Generated with Claude Code` の行を付ける
 - **PRのマージと、ブランチの削除は、ユーザーが行う。** Claude Code は、マージしない
@@ -113,7 +114,8 @@ Refs #23
 | テスト | `.\gradlew.bat test` | `backend/`（Docker Desktop が必要） |
 | テスト＋静的チェック（Checkstyle・SpotBugs・JaCoCo） | `.\gradlew.bat check` | `backend/`（Docker Desktop が必要） |
 | 画面を起動（http://localhost:5173） | `npm run dev` | `frontend/`（データを見るには、DBとバックエンドも起動） |
-| 画面のテスト／静的チェック／ビルド | `npm test` ／ `npm run lint` ／ `npm run build` | `frontend/` |
+| 画面のテスト／静的チェック／ビルド | `npm test` ／ `npm run lint` ／ `npm run format:check` ／ `npm run build` | `frontend/` |
+| 画面の整形（Prettier） | `npm run format`（整形する） ／ `npm run format:check`（確かめる） | `frontend/`（コミットの前に `npm run format`。CI も確かめる） |
 
 - バックエンドは、**DBが起動していないと、起動に失敗する**
 - 新しいシェルで `java` が見つからないときは、`JAVA_HOME` を `C:\Program Files\Eclipse Adoptium\jdk-25*` にする

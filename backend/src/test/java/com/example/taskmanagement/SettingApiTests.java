@@ -6,6 +6,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -46,12 +54,50 @@ class SettingApiTests {
 		update("{\"background\":\"" + original + "\"}").andExpect(status().isOk());
 	}
 
+	// 取得（GET）は、読むだけ。設定の行が無いときは、初期値（青空）を返すが、DBには書き込まない。
+	// 行を作るのは、起動時の DataInitializer と、変えたとき（PUT）だけ
 	@Test
-	void 設定がまだないときは_初期値の青空で作られる() throws Exception {
+	void 設定がまだないときは_初期値の青空を返すが_取得では行を作らない() throws Exception {
 		settingRepository.deleteAll(); // 初めて開いたときの状態にする（終わったら、元の値に戻す）
 
-		mockMvc.perform(get("/api/settings")).andExpect(jsonPath("$.background").value("sky"));
+		mockMvc.perform(get("/api/settings"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.background").value("sky"));
+		assertThat(settingRepository.count()).isZero();
+
+		update("{\"background\":\"night\"}").andExpect(status().isOk());
 		assertThat(settingRepository.count()).isEqualTo(1);
+	}
+
+	// 取得が書き込むと、同時に来たときに、両方が行を作ろうとして、片方が失敗するおそれがある。
+	// 取得は書き込まないので、何本同時に来ても、全部成功する
+	@Test
+	void 設定がまだないときに_取得が同時に来ても_全部成功する() throws Exception {
+		int threads = 8;
+		ExecutorService pool = Executors.newFixedThreadPool(threads);
+		try {
+			for (int round = 0; round < 10; round++) {
+				settingRepository.deleteAll();
+				CountDownLatch ready = new CountDownLatch(threads);
+				CountDownLatch go = new CountDownLatch(1);
+				List<Future<Integer>> statuses = new ArrayList<>();
+				for (int i = 0; i < threads; i++) {
+					statuses.add(pool.submit(() -> {
+						ready.countDown();
+						go.await(); // 全員がそろってから、いっせいに取得する
+						return mockMvc.perform(get("/api/settings")).andReturn().getResponse().getStatus();
+					}));
+				}
+				ready.await();
+				go.countDown();
+				for (Future<Integer> status : statuses) {
+					assertThat(status.get(30, TimeUnit.SECONDS)).isEqualTo(200);
+				}
+			}
+		} finally {
+			pool.shutdownNow();
+		}
+		assertThat(settingRepository.count()).isZero();
 	}
 
 	@Test

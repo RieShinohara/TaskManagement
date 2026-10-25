@@ -17,22 +17,19 @@ public class SettingService {
 		this.settingRepository = settingRepository;
 	}
 
-	// 設定は1件だけ。まだなければ、初期値（青空）で作る
-	@Transactional
+	// 設定は1件だけ。取得は、読むだけで、書き込まない。
+	// 行は、起動時に DataInitializer が作る。もし無ければ（手で消したときなど）、初期値（青空）を返すだけで、行は作らない。
+	// 取得が行を作ると、同時に来たときに、両方が作ろうとして、片方が失敗するおそれがある
+	@Transactional(readOnly = true)
 	public SettingResponse find() {
-		return SettingResponse.from(load());
+		return settingRepository.findById(BoardSetting.ID).map(SettingResponse::from)
+				.orElseGet(() -> new SettingResponse(BoardSetting.DEFAULT_BACKGROUND));
 	}
 
+	// 背景を変える。行があれば更新、無ければ作る（save は、id が決まっているので、あれば更新・なければ挿入になる）
 	@Transactional
 	public SettingResponse update(String background) {
-		BoardSetting setting = load();
-		setting.setBackground(background);
-		return SettingResponse.from(setting);
-	}
-
-	private BoardSetting load() {
-		return settingRepository.findById(BoardSetting.ID)
-				.orElseGet(() -> settingRepository.save(new BoardSetting(BoardSetting.DEFAULT_BACKGROUND)));
+		return SettingResponse.from(settingRepository.save(new BoardSetting(background)));
 	}
 
 }

@@ -60,7 +60,7 @@ erDiagram
 |---|---|---|---|
 | background | 選んだ背景（plain：無地、sky：青空、sunset：夕焼け、night：星空、auto：自動） | 必須 | 背景の選択、自動（時間帯） |
 
-- 設定は、1件だけ持つ（実装：表 `board_setting`。id はいつも 1。起動したときに、なければ作る）
+- 設定は、1件だけ持つ（実装：表 `board_setting`。id はいつも 1。起動したときに、なければ作る。作るのは、起動時と、背景を変えたとき（PUT）だけで、取得（GET）は書き込まない）
 - 初期値は sky（青空）。初めて開いたときは、青空の背景で表示する（無地は、選べる選択肢として残す）
 - API：`GET /api/settings`、`PUT /api/settings`（本文 `{"background":"night"}`。値が違えば400）
 

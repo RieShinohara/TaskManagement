@@ -149,7 +149,7 @@ Invoke-RestMethod http://localhost:8080/api/settings
 Invoke-RestMethod http://localhost:8080/api/settings -Method Put -ContentType "application/json" -Body '{"background":"night"}'
 ```
 - `background`：`plain`（無地）／`sky`（青空）／`sunset`（夕焼け）／`night`（星空）／`auto`（自動：時間帯）。違う値・空・無しは `400`
-- 設定は1件だけ。初めて取得したときは、青空（`sky`）。バックアップには、この設定が `settings` として入り、読み込むと戻る（`settings` がない古いファイルは、青空になる）
+- 設定は1件だけ。行は起動時に作られ、初めての値は青空（`sky`）。取得（GET）は読むだけで、DBに書き込まない（行が無いときは、青空を返すだけ）。バックアップには、この設定が `settings` として入り、読み込むと戻る（`settings` がない古いファイルは、青空になる）
 
 自分の背景画像:
 ```powershell

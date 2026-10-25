@@ -53,6 +53,7 @@ public class BoardService {
 
 	@Transactional
 	public CardResponse createCard(CardCreateRequest request) {
+		lockBoard();
 		BoardColumn column = columnRepository.findById(request.columnId())
 				.orElseThrow(() -> new NotFoundException(
 						"列が見つかりません: " + request.columnId()));
@@ -82,6 +83,7 @@ public class BoardService {
 	// index が列のカード数より大きいときは、一番下に入れる
 	@Transactional
 	public CardResponse moveCard(Long id, CardMoveRequest request) {
+		lockBoard();
 		Card card = cardRepository.findById(id)
 				.orElseThrow(() -> new NotFoundException("カードが見つかりません: " + id));
 		BoardColumn target = columnRepository.findById(request.columnId())
@@ -115,6 +117,7 @@ public class BoardService {
 	// 並べ直したあとの、その列のカードを、上から順に返す
 	@Transactional
 	public List<CardResponse> sortColumnByDue(Long columnId) {
+		lockBoard();
 		BoardColumn column = columnRepository.findById(columnId)
 				.orElseThrow(() -> new NotFoundException("列が見つかりません: " + columnId));
 		List<Card> cards = new ArrayList<>(cardRepository.findByColumnIdOrderByPositionAscIdAsc(columnId));
@@ -123,6 +126,17 @@ public class BoardService {
 			cards.get(i).moveTo(column, i);
 		}
 		return cards.stream().map(CardResponse::from).toList();
+	}
+
+	// 並び順（position）を決める処理（追加・移動・期限順）を、1つずつ順番に行うための、ロック。
+	// これらは、列のカードを「読んで → 計算して → 書く」。2つが同時に走ると、
+	// ①変わった行だけを更新する仕組み（変更検知）のせいで、position が重複する
+	// ②行を更新する順番が逆になって、お互いを待ち合い（デッドロック）、片方が500で失敗する
+	// ことを、テスト（CardMoveConcurrencyTests）で確かめた。
+	// 先に、全部の列の行をロックしておくと、あとから来た処理は、前の処理が終わるまで待つだけになる。
+	// 必ず、処理の「最初」に呼ぶこと（ロックを取ったあとに、カードを読むため。前の処理の結果が見える）
+	private void lockBoard() {
+		columnRepository.findAllForUpdate();
 	}
 
 	// カードを削除する。削除したカードは戻せない

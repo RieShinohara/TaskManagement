@@ -4,10 +4,8 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import com.example.taskmanagement.dto.BackupCard;
 import com.example.taskmanagement.dto.BackupColumn;
@@ -16,6 +14,7 @@ import com.example.taskmanagement.dto.BackupSettings;
 import com.example.taskmanagement.entity.BoardColumn;
 import com.example.taskmanagement.entity.BoardSetting;
 import com.example.taskmanagement.entity.Card;
+import com.example.taskmanagement.exception.InvalidRequestException;
 import com.example.taskmanagement.repository.BoardColumnRepository;
 import com.example.taskmanagement.repository.CardRepository;
 
@@ -59,7 +58,7 @@ public class BackupService {
 	public void restore(BackupFile file) {
 		int total = file.columns().stream().mapToInt(c -> c.cards().size()).sum();
 		if (total > MAX_CARDS) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "カードが多すぎます（" + MAX_CARDS + "枚まで）");
+			throw new InvalidRequestException("カードが多すぎます（" + MAX_CARDS + "枚まで）");
 		}
 
 		cardRepository.deleteAllInBatch(); // カードが列を指しているので、カードから先に消す

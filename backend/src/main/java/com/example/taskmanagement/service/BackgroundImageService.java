@@ -4,14 +4,15 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import com.example.taskmanagement.dto.BackgroundImageData;
 import com.example.taskmanagement.dto.BackgroundImageResponse;
 import com.example.taskmanagement.entity.UserBackgroundImage;
+import com.example.taskmanagement.exception.InvalidRequestException;
+import com.example.taskmanagement.exception.NotFoundException;
+import com.example.taskmanagement.exception.PayloadTooLargeException;
 import com.example.taskmanagement.repository.UserBackgroundImageRepository;
 
 // 自分の背景画像の処理を行う層
@@ -43,7 +44,7 @@ public class BackgroundImageService {
 	private UserBackgroundImage findEntity(String slot) {
 		checkSlot(slot);
 		return imageRepository.findById(slot)
-				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "画像が登録されていません: " + slot));
+				.orElseThrow(() -> new NotFoundException("画像が登録されていません: " + slot));
 	}
 
 	// 登録する。すでに登録があれば、置き換える
@@ -69,7 +70,7 @@ public class BackgroundImageService {
 	// 割り当て先は、青空・夕焼け・星空だけ
 	private void checkSlot(String slot) {
 		if (!UserBackgroundImage.SLOTS.contains(slot)) {
-			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "割り当て先が見つかりません: " + slot);
+			throw new NotFoundException("割り当て先が見つかりません: " + slot);
 		}
 	}
 
@@ -77,10 +78,10 @@ public class BackgroundImageService {
 	private void checkJpeg(byte[] image) {
 		if (image == null || image.length < 3 || (image[0] & 0xFF) != 0xFF || (image[1] & 0xFF) != 0xD8
 				|| (image[2] & 0xFF) != 0xFF) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "JPEGの画像ではありません");
+			throw new InvalidRequestException("JPEGの画像ではありません");
 		}
 		if (image.length > MAX_BYTES) {
-			throw new ResponseStatusException(HttpStatus.CONTENT_TOO_LARGE, "画像が大きすぎます（5MBまで）");
+			throw new PayloadTooLargeException("画像が大きすぎます（5MBまで）");
 		}
 	}
 

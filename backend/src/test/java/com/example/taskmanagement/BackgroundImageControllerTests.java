@@ -7,11 +7,10 @@ import static org.mockito.Mockito.mock;
 import java.io.IOException;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockHttpServletRequest;
-import org.springframework.web.server.ResponseStatusException;
 
 import com.example.taskmanagement.controller.BackgroundImageController;
+import com.example.taskmanagement.exception.PayloadTooLargeException;
 import com.example.taskmanagement.service.BackgroundImageService;
 
 import jakarta.servlet.ReadListener;
@@ -30,8 +29,7 @@ class BackgroundImageControllerTests {
 	void 送られてくる大きさが上限を超えると_本文を1バイトも読まずに413() {
 		CountingRequest request = new CountingRequest(LIMIT + 1L);
 
-		assertThatThrownBy(() -> controller.put("sky", request)).isInstanceOfSatisfying(ResponseStatusException.class,
-				e -> assertThat(e.getStatusCode()).isEqualTo(HttpStatus.CONTENT_TOO_LARGE));
+		assertThatThrownBy(() -> controller.put("sky", request)).isInstanceOf(PayloadTooLargeException.class);
 		assertThat(request.bytesRead()).isZero();
 	}
 
@@ -39,8 +37,7 @@ class BackgroundImageControllerTests {
 	void 大きさが分からない送り方でも_上限より1バイト多く読んだところでやめて413() {
 		CountingRequest request = new CountingRequest(-1); // 大きさを申告しない。本文は、いくらでも続く
 
-		assertThatThrownBy(() -> controller.put("sky", request)).isInstanceOfSatisfying(ResponseStatusException.class,
-				e -> assertThat(e.getStatusCode()).isEqualTo(HttpStatus.CONTENT_TOO_LARGE));
+		assertThatThrownBy(() -> controller.put("sky", request)).isInstanceOf(PayloadTooLargeException.class);
 		assertThat(request.bytesRead()).isEqualTo(LIMIT + 1L);
 	}
 

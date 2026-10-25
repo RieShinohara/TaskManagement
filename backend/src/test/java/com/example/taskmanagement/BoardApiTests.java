@@ -1,11 +1,14 @@
 package com.example.taskmanagement;
 
 import static org.hamcrest.Matchers.hasSize;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.net.URI;
 
 import org.junit.jupiter.api.Test;
 import com.jayway.jsonpath.JsonPath;
@@ -13,8 +16,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -63,6 +68,25 @@ class BoardApiTests {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$[?(@.title=='資料作成')]").exists())
 				.andExpect(jsonPath("$[?(@.title=='買い物')]").exists());
+	}
+
+	// 作ったカードの住所が、Location ヘッダで分かる（HTTP の標準）。その住所で、作ったカードが取れる
+	@Test
+	void カードを追加すると_Locationヘッダに_作ったカードの住所が付く() throws Exception {
+		MvcResult created = mockMvc.perform(post("/api/cards").contentType(MediaType.APPLICATION_JSON)
+				.content("{\"title\":\"loc-card\",\"columnId\":" + firstColumnId() + "}"))
+				.andExpect(status().isCreated())
+				.andReturn();
+		long id = JsonPath.parse(created.getResponse().getContentAsString()).read("$.id", Long.class);
+
+		String location = created.getResponse().getHeader(HttpHeaders.LOCATION);
+		assertNotNull(location);
+		assertTrue(location.endsWith("/api/cards/" + id), "Location は /api/cards/" + id + " で終わる：" + location);
+
+		mockMvc.perform(get(URI.create(location)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.id").value(id))
+				.andExpect(jsonPath("$.title").value("loc-card"));
 	}
 
 	@Test

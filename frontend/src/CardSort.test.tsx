@@ -69,7 +69,9 @@ afterEach(() => vi.unstubAllGlobals())
 test('各列に「期限順」ボタンがある', async () => {
   await setup()
   for (const name of ['ToDo', '作業中', '完了']) {
-    expect(within(screen.getByRole('region', { name })).getByRole('button', { name: `${name}を期限順に並べ替え` })).toBeInTheDocument()
+    expect(
+      within(screen.getByRole('region', { name })).getByRole('button', { name: `${name}を期限順に並べ替え` }),
+    ).toBeInTheDocument()
   }
 })
 

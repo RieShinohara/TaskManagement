@@ -139,7 +139,9 @@ function stubLayout(trigger: { top: number; bottom: number; left: number }, inne
   const calendarSize = { width: 256, height: 200 }
   vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
     const isTrigger = this.getAttribute('aria-haspopup') === 'dialog'
-    const r = isTrigger ? { ...trigger, width: 80, height: trigger.bottom - trigger.top } : { top: 0, bottom: 0, left: 0, ...calendarSize }
+    const r = isTrigger
+      ? { ...trigger, width: 80, height: trigger.bottom - trigger.top }
+      : { top: 0, bottom: 0, left: 0, ...calendarSize }
     return { x: r.left, y: r.top, right: r.left + r.width, ...r, toJSON: () => ({}) } as DOMRect
   })
   vi.stubGlobal('innerHeight', innerHeight)

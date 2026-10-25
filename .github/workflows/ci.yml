@@ -71,5 +71,7 @@ jobs:
       # package-lock.json のとおりに入れる（版が勝手に変わらない）
       - run: npm ci
       - run: npm run lint
+      # 整形（Prettier）が、そろっているか。ずれていたら、手元で npm run format を実行して直す
+      - run: npm run format:check
       - run: npm test
       - run: npm run build

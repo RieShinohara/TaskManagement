@@ -3,9 +3,7 @@ import { fetchCards, fetchColumns } from '../api/client'
 import type { Card, CardSearch, Column } from '../api/types'
 
 export type BoardState =
-  | { status: 'loading' }
-  | { status: 'error'; message: string }
-  | { status: 'success'; columns: Column[]; cards: Card[] }
+  { status: 'loading' } | { status: 'error'; message: string } | { status: 'success'; columns: Column[]; cards: Card[] }
 
 // 取得の結果と、どの検索条件の結果かを、セットで持つ
 type Fetched = { search: CardSearch; result: Exclude<BoardState, { status: 'loading' }> }
@@ -33,7 +31,6 @@ export function useBoard(search: CardSearch): { board: BoardState; reload: () =>
   }, [search, reloadCount])
 
   // 今の検索条件の結果がまだ届いていなければ「読み込み中」（取り直し中は、前の結果を出したままにする）
-  const board: BoardState =
-    fetched !== null && fetched.search === search ? fetched.result : { status: 'loading' }
+  const board: BoardState = fetched !== null && fetched.search === search ? fetched.result : { status: 'loading' }
   return { board, reload: () => setReloadCount((n) => n + 1) }
 }

@@ -1,10 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import {
-  backgroundImageUrl,
-  deleteBackgroundImage,
-  fetchBackgroundImages,
-  uploadBackgroundImage,
-} from '../api/client'
+import { backgroundImageUrl, deleteBackgroundImage, fetchBackgroundImages, uploadBackgroundImage } from '../api/client'
 import type { UserImage, UserImageSlot } from '../api/types'
 import { isAcceptedImage, isTooLarge, NOT_IMAGE_MESSAGE, resizeToJpeg, TOO_LARGE_MESSAGE } from '../lib/image'
 

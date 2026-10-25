@@ -50,7 +50,9 @@ test('期限のカレンダーを、マウスで開いて日付を選んでも�
   expect(screen.getByLabelText('タイトル')).toHaveValue('買い物')
 
   await user.type(screen.getByLabelText('タイトル'), '{Enter}')
-  expect(createCard).toHaveBeenCalledWith(expect.objectContaining({ title: '買い物', dueDate: expect.stringMatching(/^\d{4}-\d{2}-15$/) }))
+  expect(createCard).toHaveBeenCalledWith(
+    expect.objectContaining({ title: '買い物', dueDate: expect.stringMatching(/^\d{4}-\d{2}-15$/) }),
+  )
 })
 
 test('期限のカレンダーを、キーボードで開いただけでは、確定せず、欄は閉じない', async () => {

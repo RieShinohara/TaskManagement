@@ -51,7 +51,9 @@ function mockApi(failMove = false) {
       const id = Number(url.split('/')[3])
       const { columnId, index } = JSON.parse(init.body as string) as { columnId: number; index: number }
       const moving = stored.find((c) => c.id === id)!
-      const others = stored.filter((c) => c.columnId === columnId && c.id !== id).sort((a, b) => a.position - b.position)
+      const others = stored
+        .filter((c) => c.columnId === columnId && c.id !== id)
+        .sort((a, b) => a.position - b.position)
       others.splice(index, 0, moving)
       moving.columnId = columnId
       others.forEach((c, i) => (c.position = i))

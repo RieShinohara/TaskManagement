@@ -38,7 +38,9 @@ test('列が表示順に並び、カードは列ごとに position 順で表示�
   const names = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)
   expect(names).toEqual(['ToDo', '作業中', '完了'])
 
-  const titles = within(todo).getAllByRole('listitem').map((li) => li.textContent)
+  const titles = within(todo)
+    .getAllByRole('listitem')
+    .map((li) => li.textContent)
   expect(titles[0]).toContain('部屋の掃除')
   expect(titles[1]).toContain('牛乳を買う')
   expect(within(screen.getByRole('region', { name: '作業中' })).getByText('カードがありません')).toBeInTheDocument()
@@ -76,7 +78,10 @@ test('検索ボタンで、条件つきで取り直す', async () => {
 })
 
 test('サーバーに接続できないときは、エラーを表示する', async () => {
-  vi.stubGlobal('fetch', vi.fn(() => Promise.reject(new TypeError('Failed to fetch'))))
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(() => Promise.reject(new TypeError('Failed to fetch'))),
+  )
   render(<App />)
   expect(await screen.findByRole('alert')).toHaveTextContent('サーバーに接続できません')
 })

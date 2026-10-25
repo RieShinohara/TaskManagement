@@ -1,5 +1,14 @@
 import { describe, expect, test } from 'vitest'
-import { endOfWeek, monthGrid, parseYearMonth, shiftDate, shiftMonthOfDate, startOfWeek, yearMonthOf, shiftMonth } from './calendar'
+import {
+  endOfWeek,
+  monthGrid,
+  parseYearMonth,
+  shiftDate,
+  shiftMonthOfDate,
+  startOfWeek,
+  yearMonthOf,
+  shiftMonth,
+} from './calendar'
 
 describe('monthGrid', () => {
   test('6週間分（42日）で、日曜から始まる', () => {

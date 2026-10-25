@@ -122,7 +122,10 @@ test('カード移動で接続できないときは、接続エラーにする',
 })
 
 test('期限順の並び替えは、列を指定して POST し、並び直したカードを受け取る', async () => {
-  const sorted = [{ id: 2, columnId: 1, position: 0 }, { id: 1, columnId: 1, position: 1 }]
+  const sorted = [
+    { id: 2, columnId: 1, position: 0 },
+    { id: 1, columnId: 1, position: 1 },
+  ]
   const fn = stubFetch({ ok: true, json: async () => sorted })
   await expect(sortColumnByDue(1)).resolves.toEqual(sorted)
   expect(fn).toHaveBeenCalledWith('/api/columns/1/sort-by-due', { method: 'POST' })

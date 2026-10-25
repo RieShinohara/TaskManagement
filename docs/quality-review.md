@@ -56,7 +56,7 @@ SpotBugs の `EI_EXPOSE_REP` / `EI_EXPOSE_REP2`（9 件）：リストを持つ 
 | F6 | 中 | `DuePicker.tsx`、`Calendar.tsx`、`BackgroundPicker.tsx` | 小さな窓を開いても、フォーカスが移らない。矢印キーで日付や背景を選べない（ARIA の `radiogroup` なのに） | フォーカスの移動、矢印キーの操作 | **対応済み**（期限のカレンダー：Issue #94、背景の選択窓：Issue #95）。開くとフォーカスが窓の中に移る、矢印キーで動かす、Enter / Space で選ぶ、Tab は窓の中を回る、閉じるとボタンに戻る。ユーザーが、キーボードとマウスで確認済み。背景の窓は、矢印キーで「動かす」だけで、「選ぶ」のは Enter / Space（選ぶとすぐ切り替わって閉じるため。標準のラジオボタンとの違い） |
 | F7 | 中 | テスト | アクセシビリティの自動検査（例：`jest-axe`）、フォーカス、連続操作のテストがない。カバレッジの設定もない | 追加を検討 | |
 | F8 | 低 | `Board.tsx`、`BoardColumn.tsx` ほか | `'完了'` と `255` の重複、`useCallback` の不足、`as` によるキャストの多用、期限切れの判定が 2 か所、`BackupControls` の完了表示に `aria-live` がない | 定数・関数にまとめる。型ガードにする | |
-| F9 | 低 | 設定 | Prettier（整形の自動化）と CI（PR での自動チェック）がない。TypeScript の `noUncheckedIndexedAccess` などは未設定 | 導入を検討（整形は差分が大きいので、単独の PR で） | |
+| F9 | 低 | 設定 | Prettier（整形の自動化）と CI（PR での自動チェック）がない。TypeScript の `noUncheckedIndexedAccess` などは未設定 | 導入を検討（整形は差分が大きいので、単独の PR で） | **CI は対応済み**（Issue #126、`.github/workflows/ci.yml`）。PR と main への push で、サーバー（`gradlew check`）と画面（lint・test・build）を自動で走らせる。**Prettier は未対応**（別の Issue で、単独の PR にする）。`noUncheckedIndexedAccess` なども未設定 |
 | F10 | 低 | `CardItem.tsx` | カード全体が「押すボタン」と「ドラッグのつかみ口」を兼ねる。短い押下とドラッグを、100ms の待ち（`justDraggedRef`）で区別している | ドラッグ用のつかみ口を分ける | |
 
 ### 2.3 実装を設計書に合わせる事項

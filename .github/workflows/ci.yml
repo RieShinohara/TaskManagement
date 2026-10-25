@@ -19,10 +19,13 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# 実行環境（OS）は、確かめて成功した Ubuntu 24.04 に固定している。ubuntu-latest は、2026年10月から Ubuntu 26 へ切り替わっていくため、
+# 気づかないうちに環境が変わって、CI が失敗するのを防ぐ。Ubuntu 26 に上げるときは、確かめてから、ここを書き換える
+
 jobs:
   backend:
     name: backend（gradlew check）
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     defaults:
       run:
@@ -53,7 +56,7 @@ jobs:
 
   frontend:
     name: frontend（lint・test・build）
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     defaults:
       run:

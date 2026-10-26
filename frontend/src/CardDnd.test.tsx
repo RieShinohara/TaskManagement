@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import App from './App'
@@ -233,4 +233,90 @@ test('絞り込み中は、カードをつかめないので、青い線も出�
   await user.keyboard('{ArrowDown}')
 
   expect(indicatorsIn('ToDo')).toBe(0)
+})
+
+// PUT /move を、テストが手で「成功」「失敗」させられるモック。成功したときだけ、サーバーの並びを書き換える
+function mockControlledMoves() {
+  const stored = cards.map((c) => ({ ...c }))
+  const moves: { id: number; settle: (ok: boolean) => void }[] = []
+  const apply = (id: number, columnId: number, index: number) => {
+    const moving = stored.find((c) => c.id === id)!
+    const others = stored.filter((c) => c.columnId === columnId && c.id !== id).sort((a, b) => a.position - b.position)
+    others.splice(index, 0, moving)
+    moving.columnId = columnId
+    others.forEach((c, i) => (c.position = i))
+    return moving
+  }
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((url: string, init?: RequestInit) => {
+      if (init?.method === 'PUT' && url.endsWith('/move')) {
+        const id = Number(url.split('/')[3])
+        const { columnId, index } = JSON.parse(init.body as string) as { columnId: number; index: number }
+        return new Promise<Response>((resolve) =>
+          moves.push({
+            id,
+            settle: (ok) =>
+              resolve(
+                ok
+                  ? ({ ok: true, json: async () => apply(id, columnId, index) } as Response)
+                  : ({ ok: false, status: 500 } as Response),
+              ),
+          }),
+        )
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => (url.startsWith('/api/columns') ? columns : stored.map((c) => ({ ...c }))),
+      } as Response)
+    }),
+  )
+  return moves
+}
+
+const pause = () => new Promise((resolve) => setTimeout(resolve, 60))
+
+async function moveRight(user: ReturnType<typeof userEvent.setup>, title: RegExp) {
+  screen.getByRole('button', { name: title }).focus()
+  await user.keyboard(' ')
+  await user.keyboard('{ArrowRight}')
+  await user.keyboard(' ')
+}
+
+test('保存している間は、次のカードを動かせない。保存が終われば、また動かせる', async () => {
+  const moves = mockControlledMoves()
+  const user = userEvent.setup()
+  render(<App />)
+  await screen.findByRole('region', { name: 'ToDo' })
+
+  await moveRight(user, /部屋の掃除/)
+  await waitFor(() => expect(moves).toHaveLength(1))
+  await moveRight(user, /牛乳を買う/) // 保存中なので、つかめない
+  await pause()
+  expect(moves).toHaveLength(1)
+  expect(titlesIn('ToDo')).toEqual(['牛乳を買う']) // 動かしていないほうは、そのまま
+  expect(titlesIn('作業中')).toEqual(['部屋の掃除', '資料を読む']) // 動かしたほうは、先に動いたまま
+
+  await act(async () => moves[0]!.settle(true))
+  await pause()
+  await moveRight(user, /牛乳を買う/) // 保存が終わったので、動かせる
+  await waitFor(() => expect(moves).toHaveLength(2))
+  await act(async () => moves[1]!.settle(true))
+})
+
+test('保存に失敗したら、元の並びに戻り、エラーが出て、すぐまた動かせる', async () => {
+  const moves = mockControlledMoves()
+  const user = userEvent.setup()
+  render(<App />)
+  await screen.findByRole('region', { name: 'ToDo' })
+
+  await moveRight(user, /部屋の掃除/)
+  await waitFor(() => expect(moves).toHaveLength(1))
+  await act(async () => moves[0]!.settle(false))
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('サーバーからエラーが返りました')
+  await waitFor(() => expect(titlesIn('ToDo')).toEqual(['部屋の掃除', '牛乳を買う']))
+  await moveRight(user, /牛乳を買う/)
+  await waitFor(() => expect(moves).toHaveLength(2)) // 失敗のあとも、動かせなくならない
+  await act(async () => moves[1]!.settle(true))
 })

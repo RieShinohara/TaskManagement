@@ -46,6 +46,7 @@ export function Board({ columns, cards, onCardCreated, onCardUpdated, onCardMove
   const [pending, setPending] = useState<Pending | null>(null)
   const [activeId, setActiveId] = useState<number | null>(null) // いま、つかんでいるカード
   const [moveError, setMoveError] = useState<string | null>(null) // 動かす・並べ替えの失敗
+  const [saving, setSaving] = useState(false) // カードを動かして、保存している間（このあいだは、次のカードを動かせない）
   const [sortingColumnId, setSortingColumnId] = useState<number | null>(null) // 期限順に並べ直している列
   const justDraggedRef = useRef(false) // ドラッグの直後に、「押した」と誤って受け取らないため
 
@@ -114,6 +115,9 @@ export function Board({ columns, cards, onCardCreated, onCardUpdated, onCardMove
       return
     }
     setPending({ base: cards, cards: next })
+    // 保存が終わるまで、次のカードは動かせない。続けて動かすと、先の保存の成功・失敗で、
+    // あとに動かした分まで画面から消えてしまうため
+    setSaving(true)
     try {
       await moveCardApi(id, end)
       onCardMoved()
@@ -121,6 +125,8 @@ export function Board({ columns, cards, onCardCreated, onCardUpdated, onCardMove
       setPending(null) // 保存できなかったので、元の並びに戻す
       setMoveError(e instanceof Error ? e.message : 'カードを動かせませんでした')
       onCardMoved()
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -191,7 +197,7 @@ export function Board({ columns, cards, onCardCreated, onCardUpdated, onCardMove
             today={today}
             onCardCreated={onCardCreated}
             onCardOpen={openCard}
-            dragDisabled={dragDisabled}
+            dragDisabled={dragDisabled || saving}
             onSortByDue={(id) => void handleSortByDue(id)}
             sorting={sortingColumnId !== null}
             tone={tone}

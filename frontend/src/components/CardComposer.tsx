@@ -2,6 +2,7 @@ import { useRef, useState, type FocusEvent, type KeyboardEvent } from 'react'
 import { createCard } from '../api/client'
 import type { CardColor } from '../api/types'
 import { CARD_BG } from '../lib/cardColors'
+import { TITLE_MAX } from '../lib/cardRules'
 import { todayString } from '../lib/date'
 import { ColorPicker } from './ColorPicker'
 import { DuePicker } from './DuePicker'
@@ -72,7 +73,7 @@ export function CardComposer({ columnId, onCreated, onClose }: Props) {
         autoFocus
         type="text"
         value={title}
-        maxLength={255}
+        maxLength={TITLE_MAX}
         aria-label="タイトル"
         placeholder="タイトルを入力してください"
         onChange={(e) => setTitle(e.target.value)}

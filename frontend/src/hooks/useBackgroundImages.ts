@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { backgroundImageUrl, deleteBackgroundImage, fetchBackgroundImages, uploadBackgroundImage } from '../api/client'
+import { USER_IMAGE_SLOTS } from '../api/types'
 import type { UserImage, UserImageSlot } from '../api/types'
 import { isAcceptedImage, isTooLarge, NOT_IMAGE_MESSAGE, resizeToJpeg, TOO_LARGE_MESSAGE } from '../lib/image'
 
 // 登録済みの画像。割り当て先 → その画像
 type ImageMap = Partial<Record<UserImageSlot, UserImage>>
-
-const SLOTS: string[] = ['sky', 'sunset', 'night']
 
 // 登録済みの、自分の背景画像を持つ。登録（縮小して送る）と、削除（元に戻す）もできる。
 // 失敗したときは、Error を投げる（メッセージは、そのまま画面に出せる文）
@@ -26,7 +25,7 @@ export function useBackgroundImages(): {
         if (cancelled || !Array.isArray(list)) return
         const next: ImageMap = {}
         for (const image of list) {
-          if (SLOTS.includes(image?.slot)) next[image.slot] = image
+          if (USER_IMAGE_SLOTS.includes(image?.slot)) next[image.slot] = image
         }
         setImages(next)
       })
@@ -60,7 +59,7 @@ export function useBackgroundImages(): {
   }, [])
 
   const urls: Partial<Record<UserImageSlot, string>> = {}
-  for (const slot of SLOTS as UserImageSlot[]) {
+  for (const slot of USER_IMAGE_SLOTS) {
     const image = images[slot]
     if (image) urls[slot] = backgroundImageUrl(image)
   }

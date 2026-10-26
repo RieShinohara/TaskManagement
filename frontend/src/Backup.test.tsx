@@ -184,6 +184,33 @@ test('別のアプリのJSONを選んでも、読み込めないと出る', asyn
   expect(restoreCalls(fn)).toHaveLength(0)
 })
 
+test('20MBを超えるファイルは、中身を読む前に、大きすぎると出る', async () => {
+  const { fn, user } = await setup()
+  const tooLarge = jsonFile(JSON.stringify(backupBody))
+  Object.defineProperty(tooLarge, 'size', { value: 20 * 1024 * 1024 + 1 })
+  const read = vi.spyOn(tooLarge, 'text')
+
+  await chooseFile(user, tooLarge)
+
+  expect(await screen.findByRole('alertdialog')).toHaveTextContent('ファイルが大きすぎます（20MBまで）。')
+  expect(read).not.toHaveBeenCalled() // 読んでいない
+  expect(restoreCalls(fn)).toHaveLength(0)
+})
+
+test('バージョンが違う（または、ない）ファイルは、対応していないと出て、確認は出ない', async () => {
+  const { fn, user } = await setup()
+
+  await chooseFile(user, jsonFile(JSON.stringify({ ...backupBody, version: 2 })))
+  const dialog = await screen.findByRole('alertdialog')
+  expect(dialog).toHaveTextContent('このバックアップは、対応していないバージョンです。')
+  expect(within(dialog).queryByRole('button', { name: '読み込む' })).not.toBeInTheDocument()
+  await user.click(within(dialog).getByRole('button', { name: '閉じる' }))
+
+  await chooseFile(user, jsonFile(JSON.stringify({ app: 'taskboard', columns: [] })))
+  expect(await screen.findByRole('alertdialog')).toHaveTextContent('対応していないバージョンです。')
+  expect(restoreCalls(fn)).toHaveLength(0)
+})
+
 test('サーバーが400で断ったときも、読み込めないと出て、ボードは変わらない', async () => {
   const { user } = await setup(400)
 

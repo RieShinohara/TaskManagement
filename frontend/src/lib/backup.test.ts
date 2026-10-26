@@ -1,5 +1,12 @@
 import { afterEach, expect, test, vi } from 'vitest'
-import { backupFileName, parseBackupText, saveJsonFile } from './backup'
+import {
+  backupFileName,
+  isBackupTooLarge,
+  isSupportedBackupVersion,
+  MAX_BACKUP_BYTES,
+  parseBackupText,
+  saveJsonFile,
+} from './backup'
 
 afterEach(() => {
   vi.restoreAllMocks()
@@ -46,4 +53,19 @@ test('JSONファイルとして保存する：ファイル名が付き、中身�
   expect(names).toEqual(['x.json'])
   expect(JSON.parse(await blob!.text())).toEqual({ a: 1 })
   expect(document.querySelector('a[download]')).toBeNull() // 使い終わったリンクは、残さない
+})
+
+test('20MBちょうどまでは読め、1バイトでも超えると大きすぎる', () => {
+  expect(MAX_BACKUP_BYTES).toBe(20 * 1024 * 1024)
+  expect(isBackupTooLarge({ size: MAX_BACKUP_BYTES })).toBe(false)
+  expect(isBackupTooLarge({ size: MAX_BACKUP_BYTES + 1 })).toBe(true)
+  expect(isBackupTooLarge({ size: 0 })).toBe(false)
+})
+
+test('対応しているバージョンは 1 だけ（サーバーと同じ）', () => {
+  expect(isSupportedBackupVersion({ version: 1 })).toBe(true)
+  expect(isSupportedBackupVersion({ version: 2 })).toBe(false)
+  expect(isSupportedBackupVersion({ version: 0 })).toBe(false)
+  expect(isSupportedBackupVersion({ version: '1' })).toBe(false) // 文字は、数字ではない
+  expect(isSupportedBackupVersion({})).toBe(false)
 })

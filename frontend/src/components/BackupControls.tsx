@@ -1,7 +1,16 @@
 import { useRef, useState, type ChangeEvent } from 'react'
 import { fetchBackup, restoreBackup } from '../api/client'
 import type { BackupFile } from '../api/types'
-import { backupFileName, parseBackupText, saveJsonFile } from '../lib/backup'
+import {
+  BACKUP_TOO_LARGE_MESSAGE,
+  BACKUP_UNREADABLE_MESSAGE,
+  BACKUP_UNSUPPORTED_VERSION_MESSAGE,
+  backupFileName,
+  isBackupTooLarge,
+  isSupportedBackupVersion,
+  parseBackupText,
+  saveJsonFile,
+} from '../lib/backup'
 import { ConfirmDialog } from './ConfirmDialog'
 
 type Props = {
@@ -36,15 +45,20 @@ export function BackupControls({ onRestored }: Props) {
     }
   }
 
-  // ファイルが選ばれたら、読んで、軽く調べる。読めなければお知らせ、読めれば確認を出す
+  // ファイルが選ばれたら、大きさを調べ、読んで、軽く調べる。読めなければお知らせ、読めれば確認を出す
   async function handleFileChosen(e: ChangeEvent<HTMLInputElement>) {
     const input = e.target
     const chosen = input.files?.[0]
     input.value = '' // 同じファイルを、もう一度選べるように
     if (!chosen) return
     setDone(null)
+    // 大きすぎるファイルは、全部読むと画面が固まるので、読む前に断る
+    if (isBackupTooLarge(chosen)) return setDialog({ kind: 'notice', message: BACKUP_TOO_LARGE_MESSAGE })
     const file = parseBackupText(await chosen.text().catch(() => ''))
-    setDialog(file ? { kind: 'confirm', file } : { kind: 'notice', message: 'このファイルは読み込めません。' })
+    if (!file) return setDialog({ kind: 'notice', message: BACKUP_UNREADABLE_MESSAGE })
+    if (!isSupportedBackupVersion(file))
+      return setDialog({ kind: 'notice', message: BACKUP_UNSUPPORTED_VERSION_MESSAGE })
+    setDialog({ kind: 'confirm', file })
   }
 
   async function handleRestore(file: BackupFile) {

@@ -13,6 +13,26 @@ export function backupFileName(now: Date = new Date()): string {
   return `taskboard-backup-${date}-${time}.json`
 }
 
+// 読み込めるファイルの大きさの上限（20MB）。ふつうのバックアップは、数KB〜数MB。
+// 大きすぎるものは、全部読むと画面が固まるので、読む前に断る
+export const MAX_BACKUP_BYTES = 20 * 1024 * 1024
+
+// 20MBを「超える」ものが、大きすぎる（ちょうど20MBは、読める）
+export function isBackupTooLarge(file: { size: number }): boolean {
+  return file.size > MAX_BACKUP_BYTES
+}
+
+// 対応しているバックアップの版（サーバーの BackupFile.VERSION と同じ）
+export const BACKUP_VERSION = 1
+
+export function isSupportedBackupVersion(file: { version?: unknown }): boolean {
+  return file.version === BACKUP_VERSION
+}
+
+export const BACKUP_UNREADABLE_MESSAGE = 'このファイルは読み込めません。'
+export const BACKUP_TOO_LARGE_MESSAGE = 'ファイルが大きすぎます（20MBまで）。'
+export const BACKUP_UNSUPPORTED_VERSION_MESSAGE = 'このバックアップは、対応していないバージョンです。'
+
 // 選んだファイルの中身が、バックアップファイルらしいかを、軽く調べる（確認メッセージを出す前の関門）。
 // 読めなければ null。細かい検査（色や日付など）は、サーバーがもう一度行う
 export function parseBackupText(text: string): BackupFile | null {

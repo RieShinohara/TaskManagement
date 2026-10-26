@@ -39,7 +39,7 @@
 | データベースへの接続 | Spring Data JPA ＋ PostgreSQLドライバ | SQLを直接書かずに、Javaのクラスでデータを扱える |
 | 入力の検査（サーバー側） | Spring Boot の validation（Bean Validation） | タイトルの長さや色などを、APIの入口で検査する |
 | データベースの構造の管理 | **Flyway**（2026-10-21 導入。`spring-boot-starter-flyway`）。`ddl-auto` は `validate`（確かめるだけ） | テーブルの変更を、SQL ファイル（`backend/src/main/resources/db/migration/`）として記録し、番号順に流す。講義と同じ `ddl-auto: update` から切り替えた（履歴が残る、どこでも同じテーブルになる） |
-| Node.js | **24 LTS（24.20.0）**（確定：2026-10-15） | 画面側の開発に必要。Node 26 は 2026-10-28 に LTS 入り予定だが、今は 24 が現役のLTS |
+| Node.js | **24 LTS（24.22.1）**（確定：2026-10-15。2026-10-21 のセキュリティリリースを受けて、24.20.0 から更新） | 画面側の開発に必要。Node 26 は 2026-10-28 に LTS 入り予定だが、今は 24 が現役のLTS |
 | 画面側のバージョン | **React 19.3.1、TypeScript 7.0.2、Vite 8.3.4、Tailwind CSS 4.3.3、Vitest 5.0.4**（確定：2026-10-15。すべてその時点の最新版） | `npm create vite` のテンプレートは TypeScript 6.0 だったが、7.0.2 に上げて、ビルド・テストが通ることを確認した |
 | 画面側の静的チェック | oxlint（Vite のテンプレートの標準）。アクセシビリティ（jsx-a11y）と、警告を許さない設定（`--deny-warnings`）を追加（2026-10-21） | ESLint ではなく、テンプレートの標準に合わせた |
 | 画面側の整形 | Prettier 3.9.10（版を固定）。セミコロンなし・シングルクォート・1行120文字・`endOfLine: auto`（2026-10-25） | 今のコードの書き方に合わせた設定で、変わるのは18ファイル・約114行だけ。`npm run format:check` を CI でも確かめる。文書（`*.md`）と画像などは対象外 |
@@ -62,5 +62,5 @@
 - バックエンド：`backend/` に作成済み。列・カード・移動・期限順・検索・バックアップ・設定・背景画像のAPIが、すべて実装済み（使い方は [backend/README.md](../backend/README.md)）
 - PostgreSQL 18：Docker で起動できる状態（`docker-compose.yml`）。SQLの確認（INSERT / SELECT / DELETE）と、バックエンドからの接続は確認済み（2026-10-13）
 - Docker Desktop：導入済み
-- Node.js 24 LTS（winget でインストール）：導入済み（2026-10-15）
+- Node.js 24 LTS（winget でインストール）：導入済み（2026-10-15）。24.22.1 に更新済み（2026-10-26。手順は [notes/07-quality-check.md](../notes/07-quality-check.md)）
 - フロントエンド：`frontend/` に環境を作成済み（Vite + React + TypeScript + Tailwind CSS + Vitest。使い方は [frontend/README.md](../frontend/README.md)）。計画した画面の機能（カードの追加・編集・削除、ドラッグ＆ドロップ、期限順、検索、バックアップ、背景）は、すべて実装済み。開発環境の構築手順は、[README.md](../README.md) にある

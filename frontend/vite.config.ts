@@ -18,5 +18,15 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: './src/test-setup.ts',
+    // カバレッジ（npm run test:coverage）：テストが、コードのどこまでを通ったか。
+    // しきい値は、測った数字（行95.8・文94.5・関数96.7・分岐89.2）より、少し下。下回ると、失敗する
+    coverage: {
+      provider: 'v8',
+      include: ['src/**'],
+      // テスト自身と、テスト用の道具、アプリを起動する入口（main.tsx）は、測らない
+      exclude: ['src/**/*.test.*', 'src/test-setup.ts', 'src/test-utils/**', 'src/main.tsx'],
+      reporter: ['text', 'html'],
+      thresholds: { lines: 90, statements: 90, functions: 90, branches: 80 },
+    },
   },
 })

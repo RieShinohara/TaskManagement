@@ -318,3 +318,88 @@ test('Esc で閉じると、何も選ばず、フォーカスが「背景」の�
   expect(putCalls(fn)).toHaveLength(0)
   expect(pickerButton()).toHaveFocus()
 })
+
+// 設定の更新（PUT）を、テストが手で「成功」「失敗」させられるモック（連続して選んだときの、終わる順番を決めるため）
+function mockControlledPuts(initial: Background = 'plain') {
+  const puts: { background: Background; settle: (ok: boolean) => void }[] = []
+  const fn = vi.fn<(url: string, init?: RequestInit) => Promise<Response>>((url, init) => {
+    if (url === '/api/settings' && init?.method === 'PUT') {
+      const background = (JSON.parse(init.body as string) as { background: Background }).background
+      return new Promise<Response>((resolve) => {
+        puts.push({
+          background,
+          settle: (ok) =>
+            resolve(
+              ok
+                ? ({ ok: true, json: async () => ({ background }) } as Response)
+                : ({ ok: false, status: 500 } as Response),
+            ),
+        })
+      })
+    }
+    const body = url === '/api/settings' ? { background: initial } : url.startsWith('/api/columns') ? columns : cards
+    return Promise.resolve({ ok: true, json: async () => body } as Response)
+  })
+  vi.stubGlobal('fetch', fn)
+  return puts
+}
+
+async function choose(user: ReturnType<typeof userEvent.setup>, name: string) {
+  await user.click(within(await openPicker(user)).getByRole('radio', { name }))
+}
+
+test('続けて選んだとき、先に選んだほうの保存が、あとから失敗しても、最後に選んだ背景のまま', async () => {
+  const puts = mockControlledPuts('plain')
+  const user = userEvent.setup()
+  render(<App />)
+  await screen.findByRole('region', { name: 'ToDo' })
+
+  await choose(user, '夕焼け')
+  await choose(user, '星空')
+  expect(layer()).toHaveAttribute('data-scene', 'night') // 画面は、先に変わる
+
+  // 夕焼けの保存が失敗する。星空の保存は、そのあと成功する（送られた順に、1つずつ終わらせる）
+  await waitFor(() => expect(puts).toHaveLength(1))
+  act(() => puts[0]!.settle(false))
+  await waitFor(() => expect(puts).toHaveLength(2))
+  act(() => puts[1]!.settle(true))
+
+  await waitFor(() => expect(puts[1]!.background).toBe('night'))
+  expect(layer()).toHaveAttribute('data-scene', 'night') // 星空のまま。無地には、戻らない
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument() // 最終的に星空は保存できたので、エラーは出さない
+})
+
+test('続けて選んだとき、保存のお願いは、前のが終わってから、1つずつ送られる（順番が入れ替わらない）', async () => {
+  const puts = mockControlledPuts('plain')
+  const user = userEvent.setup()
+  render(<App />)
+  await screen.findByRole('region', { name: 'ToDo' })
+
+  await choose(user, '夕焼け')
+  await choose(user, '星空')
+
+  await waitFor(() => expect(puts).toHaveLength(1))
+  await new Promise((resolve) => setTimeout(resolve, 50))
+  expect(puts).toHaveLength(1) // 夕焼けが終わるまで、星空は送られない
+  act(() => puts[0]!.settle(true))
+  await waitFor(() => expect(puts).toHaveLength(2))
+  expect(puts.map((p) => p.background)).toEqual(['sunset', 'night'])
+  act(() => puts[1]!.settle(true))
+})
+
+test('続けて選んで、最後の保存だけが失敗したときは、最後に保存できた背景に戻り、エラーが出る', async () => {
+  const puts = mockControlledPuts('plain')
+  const user = userEvent.setup()
+  render(<App />)
+  await screen.findByRole('region', { name: 'ToDo' })
+
+  await choose(user, '夕焼け')
+  await choose(user, '星空')
+  await waitFor(() => expect(puts).toHaveLength(1))
+  act(() => puts[0]!.settle(true))
+  await waitFor(() => expect(puts).toHaveLength(2))
+  act(() => puts[1]!.settle(false))
+
+  await waitFor(() => expect(layer()).toHaveAttribute('data-scene', 'sunset')) // 夕焼けは、保存できている
+  expect(await screen.findByRole('alert')).toHaveTextContent('サーバーからエラーが返りました')
+})

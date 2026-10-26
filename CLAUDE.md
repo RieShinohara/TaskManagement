@@ -116,7 +116,7 @@ Refs #23
 | テスト | `.\gradlew.bat test` | `backend/`（Docker Desktop が必要） |
 | テスト＋静的チェック（Checkstyle・SpotBugs・JaCoCo） | `.\gradlew.bat check` | `backend/`（Docker Desktop が必要） |
 | 画面を起動（http://localhost:5173） | `npm run dev` | `frontend/`（データを見るには、DBとバックエンドも起動） |
-| 画面のテスト／静的チェック／ビルド | `npm test` ／ `npm run lint` ／ `npm run format:check` ／ `npm run build` | `frontend/` |
+| 画面のテスト／静的チェック／ビルド | `npm test`（カバレッジも測るなら `npm run test:coverage`。CI はこちら） ／ `npm run lint` ／ `npm run format:check` ／ `npm run build` | `frontend/` |
 | 画面の整形（Prettier） | `npm run format`（整形する） ／ `npm run format:check`（確かめる） | `frontend/`（コミットの前に `npm run format`。CI も確かめる） |
 
 - バックエンドは、**DBが起動していないと、起動に失敗する**

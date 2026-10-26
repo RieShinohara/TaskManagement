@@ -1,5 +1,6 @@
 # 整形しないもの
 dist
+coverage
 node_modules
 package-lock.json
 # 画面に出す、そのままの静的ファイル（画像など）

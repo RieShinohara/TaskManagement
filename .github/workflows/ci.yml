@@ -73,5 +73,6 @@ jobs:
       - run: npm run lint
       # 整形（Prettier）が、そろっているか。ずれていたら、手元で npm run format を実行して直す
       - run: npm run format:check
-      - run: npm test
+      # テストと同時に、カバレッジ（どこまで通ったか）を測る。しきい値を下回ると失敗する（vite.config.ts）
+      - run: npm run test:coverage
       - run: npm run build

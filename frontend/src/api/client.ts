@@ -13,11 +13,18 @@ import type {
 
 const CONNECTION_ERROR = 'サーバーに接続できません。バックエンドとDBが起動しているか確認してください。'
 
+const UNREADABLE_RESPONSE = 'サーバーの返事を読み取れませんでした。しばらくしてから、もう一度試してください。'
+const BAD_REQUEST = 'お願いの内容が正しくありません。画面を読み込み直して、もう一度試してください。'
+const NOT_FOUND = '見つかりません。画面を読み込み直してください。'
+const CARD_NOT_FOUND = 'カードが見つかりません。画面を読み込み直してください。'
+const CARD_BAD_REQUEST = '入力内容を確認してください（タイトルは必須で255文字まで、説明文は2000文字までです）'
+
 // 通信の共通部分。開発中は、Vite のプロキシが /api をバックエンド（8080番）に中継する
-// messages：サーバーに断られたときに出す文（省略できる）
-//   badRequest：400（お願いの内容がだめ）のとき。省略すると、カードの入力についての文
+// messages：サーバーに断られたときに出す文（操作ごとに、合ったものを渡す。省略すると、一般的な文）
+//   badRequest：400（お願いの内容がだめ）のとき
+//   notFound：404（対象が見つからない）のとき。カード・列・画像など、操作によって、見つからないものが違う
 //   tooLarge：413（大きすぎる）のとき。省略すると、番号つきの一般的なエラー
-type Messages = { badRequest?: string; tooLarge?: string }
+type Messages = { badRequest?: string; notFound?: string; tooLarge?: string }
 
 async function request<T>(url: string, init?: RequestInit, messages?: Messages): Promise<T> {
   let response: Response
@@ -30,16 +37,18 @@ async function request<T>(url: string, init?: RequestInit, messages?: Messages):
     // バックエンドが止まっているとき、プロキシは 502 などを返す
     if ([502, 503, 504].includes(response.status)) throw new Error(CONNECTION_ERROR)
     if (response.status === 413 && messages?.tooLarge) throw new Error(messages.tooLarge)
-    if (response.status === 400)
-      throw new Error(
-        messages?.badRequest ?? '入力内容を確認してください（タイトルは必須で255文字まで、説明文は2000文字までです）',
-      )
-    if (response.status === 404) throw new Error('カードが見つかりません。画面を読み込み直してください。')
+    if (response.status === 400) throw new Error(messages?.badRequest ?? BAD_REQUEST)
+    if (response.status === 404) throw new Error(messages?.notFound ?? NOT_FOUND)
     throw new Error(`サーバーからエラーが返りました（${response.status}）`)
   }
   // 204 No Content（削除のあと）は、中身が空。JSONとして読むと失敗するので、読まずに終わる
   if (response.status === 204) return undefined as T
-  return response.json() as Promise<T>
+  try {
+    return (await response.json()) as T
+  } catch {
+    // 返事が JSON でない（たとえば、HTML が 200 で返った）。英語の生のエラーは、出さない
+    throw new Error(UNREADABLE_RESPONSE)
+  }
 }
 
 function getJson<T>(url: string): Promise<T> {
@@ -59,36 +68,40 @@ export function fetchCards(search: CardSearch): Promise<Card[]> {
 }
 
 export function createCard(input: CardCreateInput): Promise<Card> {
-  return request<Card>('/api/cards', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(input),
-  })
+  return request<Card>(
+    '/api/cards',
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input) },
+    { badRequest: CARD_BAD_REQUEST },
+  )
 }
 
 export function deleteCard(id: number): Promise<void> {
-  return request<void>(`/api/cards/${id}`, { method: 'DELETE' })
+  return request<void>(`/api/cards/${id}`, { method: 'DELETE' }, { notFound: CARD_NOT_FOUND })
 }
 
 export function updateCard(id: number, input: CardUpdateInput): Promise<Card> {
-  return request<Card>(`/api/cards/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(input),
-  })
+  return request<Card>(
+    `/api/cards/${id}`,
+    { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input) },
+    { badRequest: CARD_BAD_REQUEST, notFound: CARD_NOT_FOUND },
+  )
 }
 
 export function moveCard(id: number, input: CardMoveInput): Promise<Card> {
-  return request<Card>(`/api/cards/${id}/move`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(input),
-  })
+  return request<Card>(
+    `/api/cards/${id}/move`,
+    { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input) },
+    { notFound: CARD_NOT_FOUND },
+  )
 }
 
 // 列のカードを、期限の早い順に並べ直して保存する（期限なしは末尾）。並べ直したカードが、上から順に返る
 export function sortColumnByDue(columnId: number): Promise<Card[]> {
-  return request<Card[]>(`/api/columns/${columnId}/sort-by-due`, { method: 'POST' })
+  return request<Card[]>(
+    `/api/columns/${columnId}/sort-by-due`,
+    { method: 'POST' },
+    { notFound: '列が見つかりません。画面を読み込み直してください。' },
+  )
 }
 
 // 全データ（列とカード）を、バックアップファイルの形で受け取る
@@ -140,7 +153,11 @@ export function uploadBackgroundImage(slot: UserImageSlot, jpeg: Blob): Promise<
 
 // 登録した画像を消す（標準の画像に戻る）
 export function deleteBackgroundImage(slot: UserImageSlot): Promise<void> {
-  return request<void>(`/api/background-images/${slot}`, { method: 'DELETE' })
+  return request<void>(
+    `/api/background-images/${slot}`,
+    { method: 'DELETE' },
+    { notFound: '画像が登録されていません。画面を読み込み直してください。' },
+  )
 }
 
 // 登録した画像を表示するときの URL。登録日時を付けて、置き換えたときに、ブラウザが古い画像を使わないようにする

@@ -22,6 +22,9 @@ import com.example.taskmanagement.repository.CardRepository;
 @Service
 public class BackupService {
 
+	// 読み込みの本文（バックアップファイル）の大きさの上限（20MB）。画面も、同じ値で、送る前に断る
+	public static final int MAX_BYTES = 20 * 1024 * 1024;
+
 	// 読み込めるカードの数の上限（500枚が目安なので、十分に大きい値）
 	private static final int MAX_CARDS = 10000;
 

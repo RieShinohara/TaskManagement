@@ -104,14 +104,17 @@ export function BackupControls({ onRestored }: Props) {
           buttons={[{ label: '閉じる', tone: 'primary', onClick: () => setDialog(null), autoFocus: true }]}
         />
       )}
-      {done && (
-        <p className="fixed right-4 bottom-4 z-40 flex items-center gap-3 rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-green-800 shadow">
-          {done}
-          <button type="button" onClick={() => setDone(null)} className="text-sm underline">
-            閉じる
-          </button>
-        </p>
-      )}
+      {/* 入れ物は、いつも画面に置く。中身が変わると、読み上げソフトが知らせてくれる（出るときに入れ物ごと作ると、読まれないことがある） */}
+      <div role="status">
+        {done && (
+          <p className="fixed right-4 bottom-4 z-40 flex items-center gap-3 rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-green-800 shadow">
+            {done}
+            <button type="button" onClick={() => setDone(null)} className="text-sm underline">
+              閉じる
+            </button>
+          </p>
+        )}
+      </div>
     </div>
   )
 }

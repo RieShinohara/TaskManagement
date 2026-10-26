@@ -125,6 +125,21 @@ test('読み込み：ファイルを選ぶと確認が出て、「読み込む�
   expect(screen.getByText('バックアップを読み込みました。')).toBeInTheDocument()
 })
 
+test('読み込み完了のお知らせは、常にある role="status" の入れ物に入る（読み上げソフトに知らせるため）', async () => {
+  const { user } = await setup()
+  // ドラッグ操作の部品（dnd-kit）も、自分の role="status" を置くので、それは除く
+  const status = screen.getAllByRole('status').find((el) => !el.id.startsWith('DndLiveRegion'))!
+  expect(status).toBeInTheDocument() // 読み込む前から、入れ物はある
+  expect(status).toBeEmptyDOMElement()
+
+  await chooseFile(user, jsonFile(JSON.stringify(backupBody)))
+  await user.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: '読み込む' }))
+  await waitFor(() => expect(status).toHaveTextContent('バックアップを読み込みました。'))
+
+  await user.click(within(status).getByRole('button', { name: '閉じる' }))
+  expect(status).toBeEmptyDOMElement() // 文言は消えるが、入れ物は残る
+})
+
 test('確認で「キャンセル」を押すと、何も変わらない', async () => {
   const { fn, user } = await setup()
 

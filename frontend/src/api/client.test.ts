@@ -238,3 +238,46 @@ test('画像の URL には、登録日時が付く（置き換えたら、別の
   expect(a).toBe('/api/background-images/sky?v=2026-10-16T09%3A00%3A00.000Z')
   expect(b).not.toBe(a)
 })
+
+// サーバーの返事が、想定外のとき（操作に合った文言を出す。英語の生のエラーは出さない）
+
+test('返事が JSON でないとき（HTML が 200 で返るなど）は、読み取れなかったと伝える', async () => {
+  stubFetch({
+    ok: true,
+    status: 200,
+    json: async () => {
+      throw new SyntaxError('Unexpected token \'<\', "<!doctype "... is not valid JSON')
+    },
+  })
+  await expect(fetchBackup()).rejects.toThrow('サーバーの返事を読み取れませんでした')
+  await expect(fetchBackup()).rejects.not.toThrow(/Unexpected token/)
+})
+
+test('期限順の並び替えで 404 が返ったときは、列が見つからないと伝える（カードではない）', async () => {
+  stubFetch({ ok: false, status: 404 })
+  await expect(sortColumnByDue(1)).rejects.toThrow('列が見つかりません')
+})
+
+test('画像の削除で 404 が返ったときは、画像が登録されていないと伝える', async () => {
+  stubFetch({ ok: false, status: 404 })
+  await expect(deleteBackgroundImage('sky')).rejects.toThrow('画像が登録されていません')
+})
+
+test('カード移動で 404 が返ったときは、カードが見つからないと伝える', async () => {
+  stubFetch({ ok: false, status: 404 })
+  await expect(moveCard(9, { columnId: 2, index: 0 })).rejects.toThrow('カードが見つかりません')
+})
+
+test('カード移動・設定の更新で 400 が返ったときは、カードの入力についての文は出さない', async () => {
+  stubFetch({ ok: false, status: 400 })
+  await expect(moveCard(9, { columnId: 2, index: 0 })).rejects.toThrow('お願いの内容が正しくありません')
+  await expect(moveCard(9, { columnId: 2, index: 0 })).rejects.not.toThrow(/タイトル/)
+  await expect(updateSettings({ background: 'sky' })).rejects.toThrow('お願いの内容が正しくありません')
+})
+
+test('カードの追加・更新で 400 が返ったときは、入力の確認を促す（これまでどおり）', async () => {
+  stubFetch({ ok: false, status: 400 })
+  await expect(updateCard(5, { title: '', description: null, color: 'none', dueDate: null })).rejects.toThrow(
+    '入力内容を確認してください',
+  )
+})

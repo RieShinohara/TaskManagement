@@ -68,7 +68,8 @@ export type Settings = {
 }
 
 // 自分の画像を割り当てられる背景（無地と自動には、割り当てない）
-export type UserImageSlot = 'sky' | 'sunset' | 'night'
+export const USER_IMAGE_SLOTS = ['sky', 'sunset', 'night'] as const
+export type UserImageSlot = (typeof USER_IMAGE_SLOTS)[number]
 
 // 登録済みの自分の画像（バックエンドの BackgroundImageResponse と同じ形）。画像のデータそのものは入らない
 export type UserImage = {

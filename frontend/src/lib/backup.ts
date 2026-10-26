@@ -22,10 +22,18 @@ export function parseBackupText(text: string): BackupFile | null {
   } catch {
     return null
   }
-  if (typeof value !== 'object' || value === null) return null
-  const file = value as Partial<BackupFile>
-  if (file.app !== 'taskboard' || !Array.isArray(file.columns)) return null
-  return file as BackupFile
+  return isBackupFile(value) ? value : null
+}
+
+function isBackupFile(value: unknown): value is BackupFile {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'app' in value &&
+    value.app === 'taskboard' &&
+    'columns' in value &&
+    Array.isArray(value.columns)
+  )
 }
 
 // データをJSONファイルとして保存する（ブラウザのダウンロードとして）

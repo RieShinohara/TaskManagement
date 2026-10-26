@@ -17,14 +17,13 @@ import { moveCard as moveCardApi, sortColumnByDue } from '../api/client'
 import type { Card, Column } from '../api/types'
 import type { Tone } from '../lib/background'
 import { CARD_BG } from '../lib/cardColors'
-import { isOverdue, todayString } from '../lib/date'
+import { isCardOverdue } from '../lib/cardRules'
+import { todayString } from '../lib/date'
 import { parseCardDragId, parseColumnDropId } from '../lib/dragIds'
 import { cardsOfColumn, moveCard, positionOf } from '../lib/moveCard'
 import { BoardColumn } from './BoardColumn'
 import { CardFace } from './CardItem'
 import { CardModal } from './CardModal'
-
-const DONE_COLUMN_NAME = '完了'
 
 type Props = {
   columns: Column[]
@@ -215,11 +214,7 @@ export function Board({ columns, cards, onCardCreated, onCardUpdated, onCardMove
             <CardFace
               card={activeCard}
               today={today}
-              overdue={
-                columnOfCard(activeCard)?.name !== DONE_COLUMN_NAME &&
-                !!activeCard.dueDate &&
-                isOverdue(activeCard.dueDate, today)
-              }
+              overdue={isCardOverdue(activeCard.dueDate, columnOfCard(activeCard)?.name, today)}
             />
           </div>
         )}

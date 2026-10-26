@@ -3,12 +3,10 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useState } from 'react'
 import type { Card, Column } from '../api/types'
 import type { Tone } from '../lib/background'
-import { isOverdue } from '../lib/date'
+import { isCardOverdue } from '../lib/cardRules'
 import { cardDragId, columnDropId } from '../lib/dragIds'
 import { CardComposer } from './CardComposer'
 import { CardItem } from './CardItem'
-
-const DONE_COLUMN_NAME = '完了'
 
 type Props = {
   column: Column
@@ -108,7 +106,7 @@ export function BoardColumn({
                 onOpen={onCardOpen}
                 dragDisabled={dragDisabled}
                 // 完了列のカードは、期限が過ぎていても赤くしない
-                overdue={column.name !== DONE_COLUMN_NAME && !!card.dueDate && isOverdue(card.dueDate, today)}
+                overdue={isCardOverdue(card.dueDate, column.name, today)}
               />
             ))}
           </ul>

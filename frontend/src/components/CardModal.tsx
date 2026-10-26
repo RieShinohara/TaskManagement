@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
 import { deleteCard, updateCard } from '../api/client'
 import type { Card, CardColor } from '../api/types'
+import { DESCRIPTION_MAX, TITLE_MAX } from '../lib/cardRules'
 import { todayString } from '../lib/date'
 import { ColorPicker } from './ColorPicker'
 import { DuePicker } from './DuePicker'
@@ -11,9 +12,6 @@ type Props = {
   onSaved: () => void // 保存できたとき（ボードの取り直しに使う）
   onClose: () => void // 閉じる（保存のあとも、取り消しのときも）
 }
-
-const TITLE_MAX = 255
-const DESCRIPTION_MAX = 2000
 
 // 空白だけの説明文は「なし」として扱う（バックエンドと同じ）
 function normalizeDescription(text: string): string | null {

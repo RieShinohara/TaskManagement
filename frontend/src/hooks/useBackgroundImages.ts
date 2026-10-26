@@ -2,7 +2,17 @@ import { useCallback, useEffect, useState } from 'react'
 import { backgroundImageUrl, deleteBackgroundImage, fetchBackgroundImages, uploadBackgroundImage } from '../api/client'
 import { USER_IMAGE_SLOTS } from '../api/types'
 import type { UserImage, UserImageSlot } from '../api/types'
-import { isAcceptedImage, isTooLarge, NOT_IMAGE_MESSAGE, resizeToJpeg, TOO_LARGE_MESSAGE } from '../lib/image'
+import {
+  HEADER_BYTES,
+  isAcceptedImage,
+  isTooLarge,
+  isTooManyPixels,
+  NOT_IMAGE_MESSAGE,
+  readImageSize,
+  resizeToJpeg,
+  TOO_LARGE_MESSAGE,
+  TOO_MANY_PIXELS_MESSAGE,
+} from '../lib/image'
 
 // 登録済みの画像。割り当て先 → その画像
 type ImageMap = Partial<Record<UserImageSlot, UserImage>>
@@ -37,10 +47,15 @@ export function useBackgroundImages(): {
     }
   }, [])
 
-  // 選んだファイルを、検査し、横1920px以下のJPEGに縮小して、サーバーに送る
+  // 選んだファイルを、検査し（種類・ファイルの大きさ・画素数）、横1920px以下のJPEGに縮小して、サーバーに送る
   const register = useCallback(async (slot: UserImageSlot, file: File) => {
     if (!isAcceptedImage(file)) throw new Error(NOT_IMAGE_MESSAGE)
     if (isTooLarge(file)) throw new Error(TOO_LARGE_MESSAGE)
+    // 開くと巨大になる画像（ファイルは小さい）を防ぐため、開く前に、先頭から縦横の大きさを読んで調べる
+    const header = new Uint8Array(await file.slice(0, HEADER_BYTES).arrayBuffer())
+    const size = readImageSize(header)
+    if (!size) throw new Error(NOT_IMAGE_MESSAGE)
+    if (isTooManyPixels(size)) throw new Error(TOO_MANY_PIXELS_MESSAGE)
     // 種類は画像でも、中身が壊れていて開けないことがある
     const jpeg = await resizeToJpeg(file).catch(() => {
       throw new Error(NOT_IMAGE_MESSAGE)

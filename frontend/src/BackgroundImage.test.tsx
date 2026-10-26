@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, expect, test, vi } from 'vitest'
 import App from './App'
 import type { Background, Card, Column, UserImage } from './api/types'
+import { jpegBytes, pngBytes } from './test-utils/imageBytes'
 
 // 縮小（canvas）は、jsdom では動かないので、差し替える。ほかの関数は、本物を使う
 vi.mock('./lib/image', async (importOriginal) => ({
@@ -72,7 +73,9 @@ async function openPicker(user: ReturnType<typeof userEvent.setup>) {
   return screen.getByRole('dialog', { name: '背景を選ぶ' })
 }
 
-const imageFile = (type = 'image/png', name = 'photo.png') => new File(['image-bytes'], name, { type })
+// 画像を開く前に、先頭から縦横の大きさを読むので、先頭だけは本物の形にする（中身は、ない）
+const imageFile = (type = 'image/png', name = 'photo.png', bytes: Uint8Array<ArrayBuffer> = pngBytes(1600, 900)) =>
+  new File([bytes], name, { type })
 
 afterEach(() => {
   vi.clearAllMocks()
@@ -183,6 +186,46 @@ test('20MBを超えるファイルを選ぶと、大きすぎると出て、登�
   await user.click(within(await openPicker(user)).getByRole('button', { name: '青空の画像を選ぶ' }))
   await user.upload(screen.getByLabelText('背景にする画像を選ぶ'), justRight)
   await waitFor(() => expect(callsTo(fn, 'PUT', '/api/background-images/sky')).toHaveLength(1))
+})
+
+test('画素数が5000万を超える画像は、開く前に弾かれる（ファイルは小さくても）', async () => {
+  const { fn, user } = await setup()
+
+  await user.click(within(await openPicker(user)).getByRole('button', { name: '青空の画像を選ぶ' }))
+  await user.upload(
+    screen.getByLabelText('背景にする画像を選ぶ'),
+    imageFile('image/png', 'bomb.png', pngBytes(30000, 30000)),
+  )
+
+  expect(await screen.findByRole('alertdialog')).toHaveTextContent('画像が大きすぎます（5000万画素まで）。')
+  expect(vi.mocked(resizeToJpeg)).not.toHaveBeenCalled() // 開いていない
+  expect(callsTo(fn, 'PUT', '/api/background-images')).toHaveLength(0)
+})
+
+test('5000万画素ちょうどの画像は、登録できる', async () => {
+  const { fn, user } = await setup()
+
+  await user.click(within(await openPicker(user)).getByRole('button', { name: '青空の画像を選ぶ' }))
+  await user.upload(
+    screen.getByLabelText('背景にする画像を選ぶ'),
+    imageFile('image/jpeg', 'wide.jpg', jpegBytes(10000, 5000)),
+  )
+
+  await waitFor(() => expect(callsTo(fn, 'PUT', '/api/background-images/sky')).toHaveLength(1))
+})
+
+test('先頭から縦横が読めないファイルは、開かずに、読み込めないと出る', async () => {
+  const { fn, user } = await setup()
+
+  await user.click(within(await openPicker(user)).getByRole('button', { name: '青空の画像を選ぶ' }))
+  await user.upload(
+    screen.getByLabelText('背景にする画像を選ぶ'),
+    imageFile('image/png', 'fake.png', new TextEncoder().encode('image-bytes')),
+  )
+
+  expect(await screen.findByRole('alertdialog')).toHaveTextContent('このファイルは読み込めません')
+  expect(vi.mocked(resizeToJpeg)).not.toHaveBeenCalled()
+  expect(callsTo(fn, 'PUT', '/api/background-images')).toHaveLength(0)
 })
 
 test('画像として開けないファイルは、読み込めないと出る', async () => {

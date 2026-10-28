@@ -1,5 +1,16 @@
 # DBのパスワードなどを書く個人用ファイル（見本は .env.example）
 .env
 
+# Terraform の状態ファイルと変数ファイル（パスワードなどの秘密が入ることがある）
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+crash.log
+crash.*.log
+.terraformrc
+terraform.rc
+
 # バックアップのファイル（個人の予定が入るので、公開リポジトリに入れない）
 taskboard-backup-*.json

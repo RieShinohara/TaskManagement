@@ -12,6 +12,8 @@ AIエンジニア養成コースの学習記録です。Claude Codeと一緒に�
 | [06-frontend-guide.md](06-frontend-guide.md) | フロントエンド（React + TypeScript + Vite）の仕組みと、画面がデータを表示するまでの流れ。機能ごとの画面の作り方 |
 | [07-quality-check.md](07-quality-check.md) | 品質チェック：静的チェック（lint）の道具と考え方。整形（Prettier）と CI（自動チェック）。機能が完成したあとの点検の進め方 |
 
+| [08-aws-terraform-guide.md](08-aws-terraform-guide.md) | AWS と Terraform でデプロイするための解説と準備：IaC、AWS の用語、AWS CLI、Terraform の使い方、認証、AI に任せるときの安全ルール。構成の比較は [docs/deploy-options.md](../docs/deploy-options.md) |
+
 ## 読む順番のおすすめ
 1. [01](01-git-and-github.md)：作業の進め方（Issue → ブランチ → PR）。これを守って、すべて作った
 2. [02](02-requirements-process.md) → [03](03-prototype-guide.md)：何を作るかを決め、試作で確かめた流れ
@@ -19,7 +21,8 @@ AIエンジニア養成コースの学習記録です。Claude Codeと一緒に�
 4. [06](06-frontend-guide.md) の1〜5章：画面の土台（React、プロキシ、フォルダの構成）
 5. 機能ごとの章（下の対応表）。**同じ機能の、バックエンドと画面を、続けて読むと分かりやすい**
 6. 機能がそろったあとの点検は、[07](07-quality-check.md)
-7. 分からない言葉は、[用語集](04-glossary.md)
+7. AWS にデプロイする準備は、[08](08-aws-terraform-guide.md)
+8. 分からない言葉は、[用語集](04-glossary.md)
 
 ## 機能と章の対応表
 機能は、「バックエンドのAPI」→「画面」の順に作った。章の番号は、それぞれのノートの章。

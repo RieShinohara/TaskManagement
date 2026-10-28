@@ -12,7 +12,7 @@ AIエンジニア養成コースの学習記録です。Claude Codeと一緒に�
 | [06-frontend-guide.md](06-frontend-guide.md) | フロントエンド（React + TypeScript + Vite）の仕組みと、画面がデータを表示するまでの流れ。機能ごとの画面の作り方 |
 | [07-quality-check.md](07-quality-check.md) | 品質チェック：静的チェック（lint）の道具と考え方。整形（Prettier）と CI（自動チェック）。機能が完成したあとの点検の進め方 |
 
-| [08-aws-terraform-guide.md](08-aws-terraform-guide.md) | AWS と Terraform でデプロイするための解説と準備：IaC、AWS の用語、AWS CLI、Terraform の使い方、認証、AI に任せるときの安全ルール。構成の比較は [docs/deploy-options.md](../docs/deploy-options.md) |
+| [08-aws-terraform-guide.md](08-aws-terraform-guide.md) | AWS と Terraform でデプロイするための解説と準備：IaC、AWS の用語、AWS CLI、Terraform の使い方、認証（アクセスキーと SSO の比較、`aws configure`、IAM ロールと OIDC）、AI に任せるときの安全ルール。構成の比較は [docs/deploy-options.md](../docs/deploy-options.md) |
 
 ## 読む順番のおすすめ
 1. [01](01-git-and-github.md)：作業の進め方（Issue → ブランチ → PR）。これを守って、すべて作った

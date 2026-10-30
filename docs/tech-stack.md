@@ -53,7 +53,7 @@
 - 上の「案」の最終確認（バージョンを含む）
 - テーブルの作り方：Flyway を導入済み（2026-10-21）
 - アイコンの部品：使わないことにした。必要なアイコンは、自前のSVGで描く
-- デプロイ先（AWS ＋ Terraform）：認証は、まず講義と同じアクセスキー方式（SSO はあとで試す）。構成は、講義を確認してから決める。候補は [デプロイ先の選択肢](deploy-options.md)。公開するときは、ログインがない点の対策が必要（現状は「利用者のPC内でのみ動作」が前提）
+- デプロイ先（AWS ＋ Terraform）：認証は、まず講義と同じアクセスキー方式（SSO はあとで試す）。構成は、講義の方針で、**画面とサーバーを同じ EC2 に載せる（無料の範囲）**。Terraform は段階的に作る：段階1（空の EC2）は、作成・SSH の確認・削除まで完了（2026-10-30）。次の段階（RDS、ソフトの導入、アプリのデプロイ）は、講義の続きを見てから決める。候補は [デプロイ先の選択肢](deploy-options.md)。公開するときは、ログインがない点の対策が必要（現状は「利用者のPC内でのみ動作」が前提。段階1は、SSH を自分の IP だけに許可）
 - 品質チェックで挙がった改善の優先度（[品質チェックの記録](quality-review.md) を参照）
 
 ## 5. 現在の開発環境
@@ -64,4 +64,5 @@
 - PostgreSQL 18：Docker で起動できる状態（`docker-compose.yml`）。SQLの確認（INSERT / SELECT / DELETE）と、バックエンドからの接続は確認済み（2026-10-13）
 - Docker Desktop：導入済み
 - Node.js 24 LTS（winget でインストール）：導入済み（2026-10-15）。24.22.1 に更新済み（2026-10-26。手順は [notes/07-quality-check.md](../notes/07-quality-check.md)）
+- AWS CLI 2.39.0、Terraform 1.16.6（winget でインストール）：導入済み（2026-10-28）。認証は専用の IAM ユーザー（アクセスキー）。コードは `terraform/`（AWS provider 6.x）。AWS 上には、今は何も作っていない（段階1を、2026-10-30 に削除済み）。手順は [notes/08-aws-terraform-guide.md](../notes/08-aws-terraform-guide.md)
 - フロントエンド：`frontend/` に環境を作成済み（Vite + React + TypeScript + Tailwind CSS + Vitest。使い方は [frontend/README.md](../frontend/README.md)）。計画した画面の機能（カードの追加・編集・削除、ドラッグ＆ドロップ、期限順、検索、バックアップ、背景）は、すべて実装済み。開発環境の構築手順は、[README.md](../README.md) にある

@@ -7,7 +7,7 @@
 - Trello風のタスク管理アプリ（AIエンジニア養成コースの課題）。顧客は架空のフリーランス「Aさん」
 - リポジトリ：`RieShinohara/TaskManagement`（**公開リポジトリ**）
 - 技術：バックエンドは Java 25 + Spring Boot 4.1.1 + Gradle、DBは PostgreSQL 18（Docker）、画面は React（TypeScript、Vite、Tailwind CSS、dnd-kit）。詳細は [docs/tech-stack.md](docs/tech-stack.md)
-- 構成：`docs/`（要件定義）、`backend/`（本番のサーバー）、`frontend/`（本番の画面）、`prototype/`（使い捨ての試作）、`notes/`（学習ノート）
+- 構成：`docs/`（要件定義）、`backend/`（本番のサーバー）、`frontend/`（本番の画面）、`terraform/`（AWS に作る物のコード。段階的に作成中）、`prototype/`（使い捨ての試作）、`notes/`（学習ノート）
 - 状況：計画した機能は、すべて実装済み（カードの追加・編集・削除、ドラッグ＆ドロップ、期限順、検索、バックアップ、背景）。使い方は [README.md](README.md)
 
 ## 2. ユーザーへの接し方
@@ -106,6 +106,7 @@ Refs #23
 - **パスワード、キー、個人情報を、コミットしない。** DBのパスワードは `.env`（コミットしない）に書く。見本は `.env.example`
 - **バックアップのファイル（`taskboard-backup-*.json`）と、自分で登録した背景画像は、コミットしない。** 個人の予定や写真が入るため。バックアップは `.gitignore` で除外している。背景画像は、DBに保存され、リポジトリには入らない。テストに使う画像やJSONは、テストコードの中で作る
 - 権利が不明な画像や文章を、入れない（画像は、出典とライセンスを、`CREDITS.md` に書く。標準の背景画像のものは、`frontend/public/backgrounds/CREDITS.md`）
+- **AWS の秘密を、コミットしない・チャットに貼らない。** アクセスキー、パスフレーズ、SSH の**秘密鍵**（`id_ed25519`。拡張子なし）、アカウント ID は、出さない。Terraform の `terraform.tfvars`（自分の IP が入る）、`*.tfstate`、`*.tfplan` も、コミットしない（`.gitignore` で除外済み）。公開鍵（`.pub`）と、コマンドの出力は、見せてよい（アカウント ID と IP は隠す）
 
 ## 5. 開発のコマンド
 | やりたいこと | コマンド | 場所 |
@@ -124,6 +125,23 @@ Refs #23
 - **ポートは固定**：バックエンド 8080、画面 5173、DB 5432。サーバーを起動するときは、先に使用中でないか確認し、競合したら、スキル `dev-port-conflict`（`.claude/skills/dev-port-conflict/`）の手順に従う。別のポートで起動しない。無関係なプロセス（特にDocker）は、ユーザーの確認なしに止めない
 - 新しいシェルで `node` が見つからないときは、シェルを開き直す（Node.js 24 LTS は導入済み）
 - 詳しくは、[backend/README.md](backend/README.md)、[frontend/README.md](frontend/README.md)
+
+### Terraform（AWS）のコマンドと約束
+| やりたいこと | コマンド | 場所 |
+|---|---|---|
+| 準備（部品のダウンロード） | `terraform init` | `terraform/` |
+| 書式の整形／文法の検査 | `terraform fmt` ／ `terraform validate` | `terraform/` |
+| 予告（何も作らない） | `terraform plan` | `terraform/`（`terraform.tfvars` に `my_ip` が要る。見本は `terraform.tfvars.example`） |
+| 作る（AWS に実際に作る） | `terraform apply` | **ユーザーの承認のあとだけ** |
+| 消す（作った物を全部消す） | `terraform plan -destroy`（予告）→ `terraform destroy` | **ユーザーの承認のあとだけ** |
+
+- **`apply` と `destroy` は、ユーザーが承認するまで、実行しない。** 先に `plan` を読み上げて、何が作られる・消されるかを説明する。AWS に何かを作る操作（`aws ... create` など）も同じ
+- **段階的に進める**：EC2 → 確認 → RDS の順に、1段階ずつ。講義で習っていない工程（アプリのデプロイなど）は、ユーザーが決めるまで、進めない
+- **費用がかかる物は、使い終わったら `destroy` で消す。** 消したあと、残っていないか（`terraform state list`、AWS CLI の読み取り）を確かめる
+- `terraform.tfstate` は、消さない（Terraform が、作った物を忘れてしまう）
+- セキュリティグループの入口は、**自分の IP（`/32`）だけ**。`0.0.0.0/0` を、入口（ingress）に書かない
+- 新しいシェルで `aws` や `terraform` が見つからないときは、シェルを開き直す
+- 解説と手順は、[notes/08-aws-terraform-guide.md](notes/08-aws-terraform-guide.md)
 
 ## 6. 文書の置き場所
 - 要件定義：`docs/`（入口は `docs/requirements.md`）

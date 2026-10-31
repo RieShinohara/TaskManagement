@@ -7,6 +7,11 @@ output "public_ip" {
   value       = aws_instance.main.public_ip
 }
 
+output "web_url" {
+  description = "ブラウザで開く URL（自分の IP からだけ、届く）"
+  value       = "http://${aws_instance.main.public_ip}"
+}
+
 output "ssh_command" {
   description = "EC2 に SSH でつなぐコマンド（秘密鍵は、公開鍵から .pub を除いた名前）"
   value       = "ssh -i ${trimsuffix(var.public_key_path, ".pub")} ec2-user@${aws_instance.main.public_ip}"

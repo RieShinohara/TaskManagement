@@ -1,7 +1,7 @@
 # =============================================================
 # EC2（アプリを動かす予定のサーバー）
-#   今は「空のサーバー」を作って、SSH でつながるところまで。
-#   Java などのソフトは、まだ入れない（user_data は付けない）
+#   段階1：空のサーバーを作って、SSH でつながるところまで（完了）。
+#   段階2：起動時に、ソフトを自動で入れる（user_data.sh）。今は nginx だけ。Java と Node.js は、あとで足す
 # =============================================================
 
 # SSH の鍵：公開鍵だけを AWS に登録する。秘密鍵は、自分の PC から出さない
@@ -42,6 +42,14 @@ resource "aws_instance" "main" {
     http_endpoint = "enabled"
     http_tokens   = "required"
   }
+
+  # 起動時に、1回だけ実行する命令。Windows で保存されたファイルの改行（CRLF）は、Linux では
+  # エラーの元になるので、LF に直して渡す
+  user_data = replace(file("${path.module}/user_data.sh"), "\r\n", "\n")
+
+  # user_data は、サーバーが最初に起動するときだけ実行される。
+  # 命令を書き換えたら、サーバーを作り直して、もう一度実行させる（IP は変わる）
+  user_data_replace_on_change = true
 
   # ディスク：暗号化して、20GB（無料枠の範囲内）
   root_block_device {

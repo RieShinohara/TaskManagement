@@ -42,3 +42,26 @@ resource "aws_vpc_security_group_egress_rule" "all_outbound" {
   cidr_ipv4         = "0.0.0.0/0"
   ip_protocol       = "-1" # すべてのプロトコル
 }
+
+# -------------------------------------------------------------
+# RDS（データベース）用のセキュリティグループ
+#   入ってくる通信：PostgreSQL（5432番）を、「EC2 のセキュリティグループに属する物」からだけ許可。
+#   IP アドレスではなく、グループで指定する（EC2 の IP が変わっても、そのまま使える）。
+#   出ていく通信のルールは、書かない（RDS は、外へ出ていかないので、全部拒否でよい）
+# -------------------------------------------------------------
+resource "aws_security_group" "rds" {
+  name        = "${var.project_name}-rds-sg"
+  description = "RDS: PostgreSQL from the EC2 security group only"
+  vpc_id      = aws_vpc.main.id
+
+  tags = { Name = "${var.project_name}-rds-sg" }
+}
+
+resource "aws_vpc_security_group_ingress_rule" "postgres_from_ec2" {
+  security_group_id            = aws_security_group.rds.id
+  description                  = "PostgreSQL from EC2"
+  referenced_security_group_id = aws_security_group.ec2.id
+  ip_protocol                  = "tcp"
+  from_port                    = 5432
+  to_port                      = 5432
+}

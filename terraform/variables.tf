@@ -37,3 +37,33 @@ variable "public_key_path" {
   type        = string
   default     = "~/.ssh/id_ed25519.pub"
 }
+
+variable "db_instance_class" {
+  description = "RDS の大きさ（型）。db.t4g.micro は、無料の範囲の小さい型"
+  type        = string
+  default     = "db.t4g.micro"
+}
+
+variable "db_name" {
+  description = "RDS の中に最初に作るデータベースの名前"
+  type        = string
+  default     = "taskboard"
+}
+
+variable "db_username" {
+  description = "RDS の管理者ユーザーの名前"
+  type        = string
+  default     = "app_admin"
+}
+
+variable "db_password" {
+  description = "RDS の管理者のパスワード。terraform.tfvars に、自分で書く（コミットしない。チャットにも貼らない）"
+  type        = string
+  sensitive   = true # plan や apply の表示で、値が隠れる
+
+  # RDS が使えない文字（/ @ " と空白）を避けるため、英数字と _ - だけにする。短すぎるのも弾く
+  validation {
+    condition     = can(regex("^[A-Za-z0-9_-]{12,64}$", var.db_password))
+    error_message = "db_password は、英数字と _ - だけで、12〜64 文字にしてください。"
+  }
+}

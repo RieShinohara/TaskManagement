@@ -1,3 +1,6 @@
 # このファイルを terraform.tfvars という名前でコピーして使う（terraform.tfvars はコミットされない）。
 # 自分のグローバル IP は、ブラウザで「確認 IP」などと検索すると分かる。IP が変わったら、ここを直して terraform apply
 my_ip = "203.0.113.10"
+
+# RDS のパスワード：自分で決めて書く（英数字と _ - だけ、12〜64 文字）。下は見本で、実際には使わない
+db_password = "change-me-to-your-own-password"

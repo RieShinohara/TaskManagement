@@ -6,6 +6,7 @@
 # 段階2：アプリを動かすための道具を入れる（アプリ自体は、まだ置かない）。
 #   ① nginx（Web サーバー）
 #   ③ Java 25 と Node.js 24（SSH で、標準の部品置き場にあることを確かめた）
+#   ④ PostgreSQL のクライアント（psql）。RDS への接続テスト用
 # =============================================================
 
 # -e：失敗したら、そこで止める　-u：未定義の変数を使ったら止める　-x：実行した命令を、ログに出す
@@ -25,3 +26,7 @@ dnf install -y java-25-amazon-corretto-devel
 # Node.js 24 と npm。番号なしの nodejs は古い 18 なので、nodejs24 と、番号を付けて指定する。
 # npm は、別の部品（nodejs24-npm）
 dnf install -y nodejs24 nodejs24-npm
+
+# PostgreSQL のクライアント（psql。DB につなぐ道具）。RDS と同じ 18 系。
+# postgresql18-server は、DB の本体なので、入れない（本体は RDS が担当する）
+dnf install -y postgresql18

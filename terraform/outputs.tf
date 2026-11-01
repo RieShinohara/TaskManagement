@@ -12,6 +12,11 @@ output "web_url" {
   value       = "http://${aws_instance.main.public_ip}"
 }
 
+output "rds_endpoint" {
+  description = "RDS の接続先の名前（EC2 の中からだけ、つながる）。パスワードは、出力しない"
+  value       = aws_db_instance.main.address
+}
+
 output "ssh_command" {
   description = "EC2 に SSH でつなぐコマンド（秘密鍵は、公開鍵から .pub を除いた名前）"
   value       = "ssh -i ${trimsuffix(var.public_key_path, ".pub")} ec2-user@${aws_instance.main.public_ip}"

@@ -372,7 +372,92 @@ AI は速いが、間違えることもある。AWS は**お金がかかり、�
 - 80番を開けたのは、自分の IP だけ。`0.0.0.0/0`（全世界）を、入口に書かない約束は、守った
 - 使い終わったので、`plan -destroy` → 承認 → `destroy`。11個が消えて、`state list` が空、EC2・VPC・キーペア・固定 IP が0であることを、確認した
 
+### 10.4 Terraform 段階3：RDS を作って、EC2 からだけつないで、確認して、消した（2026-11-01）
+講義の方針（開発環境向け：1台だけ、バックアップなし、無料の範囲）に合わせて、**PostgreSQL の RDS** を作った。アプリ（Spring Boot）との接続は、デプロイの段階なので、まだやっていない。
+
+作ったもの（17個。段階2の11個＋6個）：
+
+| 追加した物 | 役割 |
+|---|---|
+| 内向きサブネット2つ（`private_a`＝1a、`private_c`＝1c） | RDS を置く場所。インターネットへの道（ルート）がない |
+| RDS 用のセキュリティグループ | 入口は **5432番を、EC2 のセキュリティグループからだけ**。出口のルールはなし |
+| その入口のルール | 送信元を IP ではなく、「EC2 のグループ」で指定（`referenced_security_group_id`） |
+| DB サブネットグループ | RDS を置いてよいサブネットの一覧。**2つ以上の区画（AZ）**を登録する決まり |
+| RDS 本体（`rds.tf`） | PostgreSQL 18.6、`db.t4g.micro`、20GB（gp3）、暗号化、公開しない |
+
+用語：
+- **RDS**：AWS が管理してくれるデータベース。OS や PostgreSQL の更新・保守を、AWS に任せられる
+- **内向きサブネット（プライベートサブネット）**：インターネットへの道がない区画。外から直接は、届かない
+- **DB サブネットグループ**：RDS の置き場所の一覧。**サブネットが2つ要るのは RDS の決まり**で、DB が動くのは1台だけ。Multi-AZ（別の区画にコピーを置く機能）とは、別の話
+- **セキュリティグループの参照**：「この IP から」ではなく、「このグループに入っている物から」と指定する。EC2 を作り直して IP が変わっても、そのまま使える
+
+開発環境向けの設定（講義と同じ）：`multi_az = false`（true は有料）、`backup_retention_period = 0`、`skip_final_snapshot = true`（消すときに記録を残さない。残すと、あとで費用がかかる）、`deletion_protection = false`（すぐ destroy できる）、`publicly_accessible = false`（公開しない）。
+
+パスワードの扱い：
+- コードには、**変数（`sensitive = true`）**として書く。値は、自分で、`terraform.tfvars`（`.gitignore` 済み）に書く。見本（偽の値）は `terraform.tfvars.example`
+- `plan` や `apply` の表示では、`(sensitive value)` と隠れる
+- ただし、**`terraform.tfstate`（手元のファイル）には、平文で残る**。state は、コミットしない・人に渡さない
+- 使える文字は、英数字と `_` `-` だけ、12〜64文字（RDS が使えない `/` `@` `"` と空白を避けるため）。変数の `validation` で、間違いを弾く
+
+進めた流れ：
+1. 事前の読み取り：RDS で使える PostgreSQL の版（18.6）、小さい型（`db.t3.micro`、`db.t4g.micro`）、区画（1a・1c・1d）を、`aws rds describe-db-engine-versions` などで確認
+2. コードを書く → `terraform fmt` → `validate` → `plan`（17個の作成。5432 の入口の送信元が EC2 のグループだけ、`publicly_accessible = false`、パスワードが隠れていることを確認）→ 承認 → `apply`（RDS の作成に、5分半かかった）
+3. SSH で入って、`dnf list available "postgresql*"` で、クライアントを調べた（**クライアントは `postgresql18`**。`postgresql18-server` は DB の本体なので、入れない）
+4. `user_data.sh` に `dnf install -y postgresql18` を足して、EC2 だけを作り直した（`1 to add, 1 to destroy`。RDS はそのまま）
+5. 動作確認のテスト（下の表）
+6. `plan -destroy` → 承認 → `destroy`（17個。RDS の削除は2分弱）。`state list` が空、RDS・スナップショット・サブネットグループ・EC2・VPC・キーペア・固定 IP が、すべて 0 であることを確認
+
+動作確認のテストの結果：
+
+| # | どこから | テスト | 結果 |
+|---|---|---|---|
+| T1 | EC2 | `pg_isready -h $DB -p 5432` | ○ `accepting connections` |
+| T2 | EC2 | `psql` で接続して `select version();` | ○ PostgreSQL 18.6 |
+| T3 | EC2 | テーブルの作成・追加・取得・削除 | ○ すべて動いた |
+| T4 | **自分の PC** | `Test-NetConnection <接続先> -Port 5432` | ○ **つながらない**（`TcpTestSucceeded : False`。名前は、10.x のプライベート IP に引かれる） |
+| T5 | 自分の PC（読み取り） | `aws rds describe-db-instances`、セキュリティグループの入口の確認 | ○ 公開しない・1台だけ・暗号化あり。5432 の送信元は、EC2 のグループだけ |
+
+「EC2 からは、つながる。外の PC からは、つながらない」ことが、確認できた。
+
+打ったコマンドの記録（振り返り用）：
+
+自分の PC（`terraform/` フォルダ）で：
+```
+cd terraform
+terraform output -raw ssh_command    # 接続のコマンドを表示する。出た1行を、そのまま実行する
+```
+
+EC2 の中（SSH で入ってから）：
+```
+cloud-init status                           # 起動時の自動導入が終わったか（status: done）
+dnf list available "postgresql*"            # 入れられるクライアントを調べる（入れない）
+psql --version                              # psql の版（18.6）
+export DB=（RDS の接続先の名前）             # 長い名前を、変数 DB に入れる（この SSH の間だけ有効）
+pg_isready -h $DB -p 5432                   # T1：DB が応答するか
+psql -h $DB -U app_admin -d taskboard       # T2：接続する（パスワードを聞かれる。画面には出ない）
+```
+`psql` の中（`taskboard=>` と表示されている間）：
+```
+select version();                           # 版を表示する
+create table t (id int, name text);        # T3：テーブルを作る
+insert into t values (1, 'hello rds');     # 1行入れる
+select * from t;                            # 読む
+drop table t;                               # 片付ける（テーブルを消す）
+\q                                          # psql を終了する
+```
+最後に `exit`（SSH を閉じる）。
+
+- `$DB` は、変数の中身に置き換わる。`-h` は接続先、`-U` はユーザー、`-d` はデータベース名、`-p` はポート番号
+- `pg_isready` は、DB が応答するかだけを見る道具。`psql` は、DB に入って SQL を実行する道具
+
+つまずいた所と、学んだこと：
+- **画面の写真にも、IP アドレスが写る**。`terraform.tfvars` のエディタ画面を貼ったとき、自分の IP が写っていた。貼る前に、IP とパスワードの部分を隠す
+- 見本のファイル（`terraform.tfvars.example`）の `db_password` の行を、そのまま書き写して、見本の文字（「あなたが決めたパスワード」）のまま使いかけた。**見本は、必ず自分の値に書き換える**（日本語は、変数の検証で弾かれる）
+- 「サブネットが2つ」と「Multi-AZ」は、別の話。サブネットは無料。Multi-AZ は有料なので、`false`
+- `terraform fmt -check` が、`terraform.tfvars`（自分のファイル）を「整形が要る」と知らせることがある。コミットしないファイルなので、気にしなくてよい
+- 使い終わったので、`destroy`。RDS は、動いている間、費用がかかる。**テストが終わったら、すぐ消す**
+
 ## 11. 次にやること
 - あとで SSO（5.2）も試す。コースの先生に、最終課題で試してよいか聞いてみる
-- **講義の続きを見てから、ユーザーが決める**：RDS（2つ目のサブネットが要る）、アプリのデプロイ（最後の工程）。段階1・2と同じく、小さく分けて、`plan` を読んでから `apply` する
+- **講義の続きを見てから、ユーザーが決める**：アプリのデプロイ（最後の工程。バックエンドを EC2 で動かして RDS につなぐ、画面を nginx で見せる）。段階1〜3と同じく、小さく分けて、`plan` を読んでから `apply` する
 - 公開のセキュリティ（9章）：今は SSH と80番を、自分の IP だけに許可。8080番（バックエンド）は、バックエンドを動かす段階で、自分の IP だけにするかを、先に決める。HTTPS は、ドメイン名とあわせて、公開するときに考える

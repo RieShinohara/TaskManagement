@@ -86,14 +86,14 @@ SpotBugs の `EI_EXPOSE_REP` / `EI_EXPOSE_REP2`（9 件）：リストを持つ 
 AWS の構成（`terraform/`、`deploy/`）を点検した。**この PR では、コードを直していない**（記録だけ）。`terraform apply` も、実行していない。
 
 - 点検の方法：(1) コードを読む、(2) `terraform fmt -check`、(3) `terraform validate`、(4) tflint（terraform の推奨ルールと AWS 用ルール）、(5) trivy（セキュリティの弱点）。(4)(5) は、Docker で使い捨て実行し、PC には入れていない。自分の値が入った `terraform.tfvars` は、(4)(5) には渡していない
-- 結果：`fmt`（`.tf` ファイル）・`validate`・tflint は、**指摘なし**。trivy は、7件（CRITICAL 1、HIGH 1、MEDIUM 4、LOW 1）
+- 結果：`fmt`（`.tf` ファイル）・`validate`・tflint は、**指摘なし**。trivy は、7件（CRITICAL 1、HIGH 1、MEDIUM 4、LOW 1）。そのうち HIGH の 1 件は、Issue #180 で直した（今は 6 件）
 - trivy の指摘の多くは、**「無料の範囲で、使い終わったらすぐ消す開発環境」という意図した設定**に対するもの。「推奨」の欄に、対応する／しないの案と理由を書いた。「判断」は、ユーザーが決めたら書く（空欄は、まだ決めていない）
 
 ### 5.1 trivy の指摘
 | ID | 重大度 | 場所 | 指摘 | 推奨 | 判断 |
 |---|---|---|---|---|---|
 | AWS-0104 | CRITICAL | `security_groups.tf`（EC2 の出口） | 出ていく通信を、すべての行き先に許可している | **対応しない**：ソフトの導入（`dnf`、`npm`）に必要。入口は自分の IP だけなので、出口が広くても、外から入られる道にはならない。絞るなら、80・443 番だけにする（乗っ取られたときの、情報の持ち出しを減らせる） | |
-| AWS-0164 | HIGH | `vpc.tf`（公開サブネット） | サブネットの設定で、作る物すべてに公開 IP を付ける | **直す（T2）** | |
+| AWS-0164 | HIGH | `vpc.tf`（公開サブネット） | サブネットの設定で、作る物すべてに公開 IP を付ける | **直す（T2）** | **対応済み（Issue #180）**。T2 を参照 |
 | AWS-0077 | MEDIUM | `rds.tf`（バックアップの保持日数 0） | 自動バックアップがない | **対応しない**：開発環境で、データは消えてよい。残すと、消したあとも費用がかかる（[学習ノート 08 の 10.4](../notes/08-aws-terraform-guide.md)） | |
 | AWS-0176 | MEDIUM | `rds.tf` | IAM 認証が、無効 | **対応しない**：アプリは、パスワードで、DB につなぐ。IAM 認証には、アプリの対応が要る | |
 | AWS-0177 | MEDIUM | `rds.tf`（削除の保護 `false`） | 間違って消せてしまう | **対応しない**：使い終わったら、すぐ `destroy` する運用のため。本番なら `true` にする | |
@@ -103,8 +103,8 @@ AWS の構成（`terraform/`、`deploy/`）を点検した。**この PR では�
 ### 5.2 コードを読んで見つけたこと
 | ID | 重大度 | 場所 | 指摘 | 推奨 | 判断 |
 |---|---|---|---|---|---|
-| T1 | 低 | `ec2.tf` の冒頭、`user_data.sh` の冒頭、`security_groups.tf` の冒頭 | コメントが、古い。「今は nginx だけ。Java と Node.js は、あとで足す」（今は、Java・Node.js・psql も入る）、「8080番は、バックエンドを動かす段階で足す」（nginx が中継するので、**開けない**と決めた） | 直す（コメントだけ。動作は変わらない） | |
-| T2 | 低〜中 | `vpc.tf`（`map_public_ip_on_launch = true`）。trivy の AWS-0164 と同じ | 公開 IP は、EC2 の側（`associate_public_ip_address = true`）で、すでに指定している。サブネットの側の設定は、重複で、後から作る物にも、公開 IP が付いてしまう | サブネットの側を `false` にする。`plan` で、サブネットの変更だけで、EC2 は作り直しにならないことを確かめてから | |
+| T1 | 低 | `ec2.tf` の冒頭、`user_data.sh` の冒頭、`security_groups.tf` の冒頭 | コメントが、古い。「今は nginx だけ。Java と Node.js は、あとで足す」（今は、Java・Node.js・psql も入る）、「8080番は、バックエンドを動かす段階で足す」（nginx が中継するので、**開けない**と決めた） | 直す（コメントだけ。動作は変わらない） | **対応済み（Issue #180）**。3つのファイルの冒頭を、今の状態に書き直した。あわせて、`ec2.tf` に残っていた「段階1・段階2」の言い方もやめた |
+| T2 | 低〜中 | `vpc.tf`（`map_public_ip_on_launch = true`）。trivy の AWS-0164 と同じ | 公開 IP は、EC2 の側（`associate_public_ip_address = true`）で、すでに指定している。サブネットの側の設定は、重複で、後から作る物にも、公開 IP が付いてしまう | サブネットの側を `false` にする。`plan` で、サブネットの変更だけで、EC2 は作り直しにならないことを確かめてから | **対応済み（Issue #180）**。`map_public_ip_on_launch = false` にした。EC2 の `associate_public_ip_address = true` は残っているので、公開 IP は付く。trivy の AWS-0164（HIGH）は消えた（残りは 6 件で、すべて「対応しない」と決めたもの）。**未確認**：今は AWS 上に何もないので、「サブネットだけの変更で、EC2 は作り直しにならない」ことは、`plan` では確かめていない。次に `apply` するときは、全部を新しく作るので、影響はない |
 | T3 | 中 | `.github/workflows/ci.yml` | CI に、Terraform のチェックがない。壊れた書き方が、`main` に入りうる | CI に、`terraform fmt -check`、`validate`（`init -backend=false`）、tflint、trivy を足す（別 Issue）。新しいジョブは、必須のチェックの設定には、影響しない（既存の `backend`・`frontend` は、そのまま） | |
 | T4 | 低 | `ec2.tf`（`data "aws_ami"` の `most_recent = true`） | AWS が新しい OS イメージを出すと、次の `plan` で、EC2 の作り直しが予告される（長く動かし続けるとき） | **対応しない**：作って、確認して、消す使い方で、毎回、最新を使うほうがよい。長く動かすなら、イメージを固定する | |
 | T5 | 低 | `rds.tf`（`engine_version = "18.6"`） | 版を固定していて、AWS の自動の更新（初期は有効）と、ずれる可能性がある（長く動かすとき） | **対応しない**：T4 と同じ理由。短期間の運用 | |

@@ -4,7 +4,7 @@
 ただし、AWS の管理画面（マネジメントコンソール）をポチポチ操作するのではなく、**コマンドと設定ファイル**で行う。それを AI（Claude Code）にやってもらう。
 この章は、そのための**予備知識と、準備の手順**をまとめたもの。
 
-> 状況（2026-10-28）：準備の段階。AWS には、まだ何も作っていない（費用ゼロ）。
+> 状況（2026-11-02）：EC2・RDS を作り、アプリ（画面とバックエンド）をデプロイして、確認し、消した（10.5）。AWS 上は、今は何もない（費用ゼロ）。以下は、準備の段階（2026-10-28）に書いた説明。
 > 認証の方式は、**まず講義と同じ「専用 IAM ユーザーのアクセスキー」**にする（SSO は、あとで試す）。デプロイ先の構成は、**講義を確認してから決める**。構成の候補は [docs/deploy-options.md](../docs/deploy-options.md)。
 
 ## 1. IaC（アイエーシー）とは
@@ -457,7 +457,62 @@ drop table t;                               # 片付ける（テーブルを消�
 - `terraform fmt -check` が、`terraform.tfvars`（自分のファイル）を「整形が要る」と知らせることがある。コミットしないファイルなので、気にしなくてよい
 - 使い終わったので、`destroy`。RDS は、動いている間、費用がかかる。**テストが終わったら、すぐ消す**
 
+### 10.5 アプリのデプロイ：画面とバックエンドを EC2 に載せ、RDS につないで、確認して、消した（2026-11-02）
+段階1〜3で作った環境（17個。Terraform のコードは変えていない）に、**アプリ本体**を載せた。Issue #174。
+
+全体の形（8080番は、外に開けていない）：
+```
+ブラウザ → [80番] nginx ─┬─ 画面のファイル（dist）を返す
+                         └─ /api で始まるお願いは、サーバーの中で 8080番へ渡す
+                              ↓
+                          バックエンド（Spring Boot）→ RDS（5432番）
+```
+
+| 置いた物 | 置き場所（EC2 の中） | 役割 |
+|---|---|---|
+| バックエンドの jar | `/opt/taskboard/app.jar` | 手元で `.\gradlew.bat bootJar` で作る（53MB）。EC2 は、メモリが 1GB で、ビルドには足りないので、**手元で作って、送る** |
+| 画面（`dist`） | `/usr/share/nginx/html/` | 手元で `npm run build` で作る |
+| 接続情報 | `/etc/taskboard.env`（権限 600） | `SPRING_DATASOURCE_URL`・`_USERNAME`・`_PASSWORD`。**コードは変えず、環境変数で、DB の接続先を RDS に向ける**（Spring Boot の仕組み）。パスワードが入るので、リポジトリには置かない |
+| systemd の設定 | `/etc/systemd/system/taskboard.service`（元は `deploy/taskboard.service`） | バックエンドを、裏で動かし続ける。サーバーの再起動で自動起動、落ちたら自動で起動し直す。`-Xmx384m` でメモリを制限 |
+| nginx の設定 | `/etc/nginx/default.d/taskboard.conf`（元は `deploy/nginx-taskboard.conf`） | `/api` の中継、画面の配信、受け取れる本文の上限を 25MB に |
+
+用語：
+- **systemd**：Linux で、裏で動き続ける物（サービス）を、起動・停止・自動再起動する仕組み。`systemctl status taskboard` で状態、`journalctl -u taskboard` でログが見える
+- **リバースプロキシ（中継）**：外からのお願いを受けて、中の別のプログラムに渡す。ブラウザには「80番の1か所」としか見えないので、**CORS（別の場所との通信を、ブラウザが止める安全機能）の設定が要らない**。開発中の Vite の `proxy` と、同じ考え方
+- **`client_max_body_size`**：nginx が受け取れる本文の大きさ。標準は 1MB で、背景画像（5MBまで）やバックアップの読み込み（20MBまで）が、途中で断られる。アプリの上限（5MB・20MB）より少し大きい 25MB にした
+- **SPA の `try_files`**：画面の中の住所（例：`/some/route`）を、直接開かれても、`index.html` を返す。画面のコードが、住所を見て表示を決める
+
+進めた流れ（各段階で確かめた）：
+1. Issue #174 → ブランチ → 設定ファイル2つを書いてコミット
+2. `terraform plan`（17個の作成）→ 承認 → `apply`（RDS の作成に5分）
+3. SSH で、道具の導入完了を確認（`cloud-init status`：done、Java 25.0.5、Node 24.22.1、psql 18.6、nginx 動作中）
+4. 手元でビルド：jar と `dist`
+5. `scp` で、EC2 に送る
+6. `/etc/taskboard.env` を作る（**パスワードは、`terraform.tfvars` から読んで、サーバーに直接渡した。画面にもチャットにも出していない**）
+7. systemd に登録して起動 → `/actuator/health` が `UP`。ログで、Flyway が RDS にテーブルを作ったと確認（`psql` で5つのテーブル）
+8. nginx の設定と画面を置く → `nginx -t`（文法の確認）→ `reload` → 画面 200、`/api/columns` 200
+9. **ユーザーが、ブラウザで、全機能を確認**（列の表示、カードの追加・編集・削除、ドラッグ、検索、期限順、バックアップ、背景、リロードしても残る）
+10. 承認後、`destroy`（17個）。`state list` が空で、EC2・RDS・スナップショット・VPC・キーペア・固定 IP が、すべて 0 を確認
+
+作り直して、もう一度デプロイするとき（手順の要約）：
+```
+cd terraform
+terraform apply                                        # 承認のあと
+cd ../backend  && .\gradlew.bat bootJar                # jar を作る
+cd ../frontend && npm run build                        # dist を作る
+# EC2 に、jar → /opt/taskboard/app.jar、dist → /usr/share/nginx/html/、deploy/ の2ファイル、
+# /etc/taskboard.env（接続情報）を置いて、systemctl enable --now taskboard → nginx reload
+```
+
+つまずいた所と、学んだこと：
+- **SSH の秘密鍵に、パスフレーズ（合言葉）がかかっていると、Claude Code は、SSH できない**。合言葉を、聞く人がいないため。解決：Windows の **ssh-agent**（合言葉を一度入れると、覚えておく係）を有効にして、**自分で** `ssh-add` した（管理者の PowerShell で、`Set-Service ssh-agent -StartupType Manual` → `Start-Service ssh-agent` → `ssh-add`）。合言葉は、Claude Code に渡らない。通常の権限の PowerShell では、`Set-Service` が「アクセスが拒否されました」になる
+- **PowerShell から、`ssh` にコマンドを渡すと、二重引用符が崩れて、`|` が別の意味になり、止まった**。引用符の多いコマンドは、Bash から（Windows 付属の `ssh.exe` を呼んで）渡すと安全
+- **Windows で書いたファイルは、改行が CRLF**。Linux の設定ファイルでは、エラーの元になるので、サーバーに置くときに `sed "s/\r$//"` で LF に直した（`terraform` の `user_data` と同じ理由）
+- `terraform output` を、そのまま実行すると、**サーバーの IP が、画面に出る**。値だけを変数に入れて使い、表示は伏せる（`-raw` で取って、`<IP>` に置き換える）
+- 動作確認で、私が推測した URL（`/api/board`）は、存在せず、404 だった。**実在の URL（`/api/columns`）は、コントローラーの `@RequestMapping` を見て確かめる**
+- nginx の `reload` の直後は、1回目だけ古い設定の返事（404）が返ることがある。もう一度で、200 になった
+
 ## 11. 次にやること
 - あとで SSO（5.2）も試す。コースの先生に、最終課題で試してよいか聞いてみる
-- **講義の続きを見てから、ユーザーが決める**：アプリのデプロイ（最後の工程。バックエンドを EC2 で動かして RDS につなぐ、画面を nginx で見せる）。段階1〜3と同じく、小さく分けて、`plan` を読んでから `apply` する
-- 公開のセキュリティ（9章）：今は SSH と80番を、自分の IP だけに許可。8080番（バックエンド）は、バックエンドを動かす段階で、自分の IP だけにするかを、先に決める。HTTPS は、ドメイン名とあわせて、公開するときに考える
+- **公開するときの課題（今回はやっていない）**：今は SSH と80番を、自分の IP だけに許可。このアプリは、ログインがなく、`/api/backup` で全データを出し入れできるので、**他の人に見せるなら、先に、ログインなどの対策が要る**。HTTPS は、ドメイン名とあわせて考える（今は `http://` なので、ブラウザが警告する）
+- デプロイの自動化（GitHub Actions から。OIDC、5.7）は、必要になったときに考える

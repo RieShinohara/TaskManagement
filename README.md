@@ -40,8 +40,13 @@ AIエンジニア養成コースの初級課題として、開発するリポジ
 | [docs/](docs/) | 要件定義（入口は [requirements.md](docs/requirements.md)）と、[品質チェックの記録](docs/quality-review.md) |
 | [backend/](backend/) | 本番のサーバー（API）。使い方は [backend/README.md](backend/README.md) |
 | [frontend/](frontend/) | 本番の画面。使い方は [frontend/README.md](frontend/README.md) |
+| [terraform/](terraform/) | AWS に作る物（ネットワーク、サーバー、データベース）のコード。使い方は [terraform/README.md](terraform/README.md)、構成と構成図は [docs/infrastructure.md](docs/infrastructure.md) |
+| [deploy/](deploy/) | AWS のサーバーの中に置く設定ファイル（バックエンドの常駐：systemd、画面の配信と中継：nginx） |
 | [prototype/](prototype/) | 要件を動かして確認するための、使い捨ての試作。`prototype/index.html` をChromeで開くと動かせる |
 | [notes/](notes/) | 学習ノート（入口は [notes/README.md](notes/README.md)） |
+
+## AWS に置くとき（学習・動作確認用）
+このアプリは、本来は自分の PC の中だけで動かします。学習と動作確認のために、AWS（EC2 と RDS）に置くこともできます。入口は、自分の IP だけに絞っています。使い終わったら、`terraform destroy` で全部消します。構成図と、作る物の一覧は [docs/infrastructure.md](docs/infrastructure.md)、コマンドは [terraform/README.md](terraform/README.md) を見てください。
 
 ## 動かし方
 必要なもの：Docker Desktop、JDK 25、Node.js 24（LTS）、Chrome。

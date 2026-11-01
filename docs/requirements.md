@@ -24,6 +24,7 @@ Aさんのみ（1人）
 | [非機能要件](non-functional-requirements.md) | 動作環境、データの保存、性能・容量、バックアップ、セキュリティ、使いやすさ、権利 |
 | [データ設計](data-design.md) | 保存するデータの構造（ER図） |
 | [技術スタック](tech-stack.md) | 使用する技術（Java・Spring Boot、React、PostgreSQL） |
+| [AWS の構成](infrastructure.md) | AWS に置くときの構成図、作る物の一覧、設計の方針、ディレクトリ構成（学習・動作確認用。要件ではなく、構成の説明） |
 | [品質チェックの記録](quality-review.md) | 完成後の品質の点検結果と、これから直す候補（要件ではなく、記録） |
 
 ## 4. 範囲の概要

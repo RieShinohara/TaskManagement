@@ -1,0 +1,25 @@
+# =============================================================
+# systemd のサービス定義：バックエンド（Spring Boot）を、サーバーの裏で動かし続ける。
+#   - サーバーの起動時に、自動で起動する
+#   - 落ちたら、自動で起動し直す
+#   - DB の接続情報は、/etc/taskboard.env から読む（パスワードが入るので、リポジトリには置かない）
+# 置き場所：EC2 の /etc/systemd/system/taskboard.service
+# =============================================================
+[Unit]
+Description=Task board backend (Spring Boot)
+# ネットワークがつながってから起動する（RDS につなぐため）
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=ec2-user
+WorkingDirectory=/opt/taskboard
+# 接続情報（SPRING_DATASOURCE_URL など）。ファイルは、この中身だけで、権限は 600
+EnvironmentFile=/etc/taskboard.env
+# -Xmx：使うメモリの上限。このサーバー（t3.micro）は、メモリが 1GB しかないので、少なめにする
+ExecStart=/usr/bin/java -Xmx384m -jar /opt/taskboard/app.jar
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

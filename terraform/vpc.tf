@@ -17,10 +17,12 @@ resource "aws_vpc" "main" {
 
 # サブネット：VPC を区切った区画。EC2 は、この中に置く
 resource "aws_subnet" "public_a" {
-  vpc_id                  = aws_vpc.main.id
-  cidr_block              = "10.0.1.0/24"
-  availability_zone       = "${var.aws_region}a"
-  map_public_ip_on_launch = true # この中に作るサーバーに、インターネットから見える IP を付ける
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = "10.0.1.0/24"
+  availability_zone = "${var.aws_region}a"
+  # この中に作る物に、自動では、公開 IP を付けない。EC2 には、ec2.tf の associate_public_ip_address で、
+  # 明示的に付ける（付けたい物だけが、公開 IP を持つ）
+  map_public_ip_on_launch = false
 
   tags = { Name = "${var.project_name}-public-a" }
 }

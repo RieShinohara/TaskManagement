@@ -16,6 +16,8 @@ AWS に作る物（ネットワーク、サーバー、データベース）を�
 | `terraform.tfvars` | **自分の値**（自分の IP、DB のパスワード）。**コミットしない** |
 | `terraform.tfvars.example` | 上の見本（偽の値）。コピーして使う |
 | `.terraform.lock.hcl` | 使う部品の版の記録（コミットする） |
+| `.tflint.hcl` | tflint（書き方の点検）の設定。CI と手元で、同じものを使う |
+| `.trivyignore` | trivy（セキュリティの点検）の指摘のうち、「意図した設定なので、対応しない」と決めた物の一覧（理由つき） |
 
 `terraform.tfstate`（Terraform が、作った物を覚えておくファイル）、`terraform.tfvars`、`*.tfplan` は、コミットしない（`.gitignore` で除外済み）。`terraform.tfstate` は、消さない。消すと、作った物を忘れてしまう。
 
@@ -37,6 +39,28 @@ AWS に作る物（ネットワーク、サーバー、データベース）を�
 | 消す | `terraform destroy` | 作った物を全部消す。**RDS のデータも消える** |
 | 作ったあとの値 | `terraform output` | IP や接続先が出る。人に見せるときは、隠す |
 
+- **`terraform fmt` は、`.tf` ファイルを指定して実行する**（例：`terraform fmt -check ec2.tf vpc.tf`）。引数なしだと、`terraform.tfvars`（自分の IP と DB のパスワード）も対象になり、`-diff` では、その中身が画面に出る。
 - **使い終わったら、`destroy` で消す。** 消したあとは、`terraform state list` が空か、AWS CLI の読み取り（`aws ec2 describe-instances` など）で、残っていないかを確かめる。
+
+## 自動の点検（CI）
+PR を作ると、GitHub Actions の `terraform` ジョブが、次を自動で実行する（AWS には、つながない。認証も秘密も使わない。`plan`・`apply` は、実行しない）。
+
+| 点検 | 内容 |
+|---|---|
+| `terraform fmt -check` | 書式がそろっているか。ずれたら、手元で `terraform fmt` を実行して直す |
+| `terraform init -backend=false` ＋ `validate` | 文法と、部品の使い方 |
+| tflint | 書き方の点検（`.tflint.hcl`） |
+| trivy config | セキュリティの弱点。意図した設定は、`.trivyignore` に理由つきで書いてある。**新しい指摘が出たときは、`.trivyignore` に足す前に、本当に対応しなくてよいかを考える** |
+
+手元で、tflint と trivy を、Docker で使い捨て実行する例（`terraform/` の中で。`terraform.tfvars` を渡さないように、`.tf` などだけを、一時フォルダにコピーして実行する）：
+```
+mkdir ../tmp-scan && cp *.tf user_data.sh .tflint.hcl .trivyignore ../tmp-scan/
+docker run --rm -v "$PWD/../tmp-scan:/data" -w /data --entrypoint sh ghcr.io/terraform-linters/tflint:v0.65.0 -c "tflint --init && tflint"
+docker run --rm -v "$PWD/../tmp-scan:/src:ro" aquasec/trivy:0.76.1 config --ignorefile /src/.trivyignore /src
+rm -rf ../tmp-scan
+```
+詳しい点検の結果は、[docs/quality-review.md](../docs/quality-review.md) の 5章。`terraform` ジョブは、**必須のチェックには入れていない**（必須は `backend` と `frontend`。[CLAUDE.md](../CLAUDE.md) の 3.7）。
+
+## その他
 - アプリ本体の置き方は、[docs/infrastructure.md の 4](../docs/infrastructure.md)。作業の記録は、[学習ノート 08 の 10.5](../notes/08-aws-terraform-guide.md)。
 - 秘密（アクセスキー、DB のパスワード、秘密鍵、アカウント ID）は、コミットしない・チャットに貼らない（[CLAUDE.md](../CLAUDE.md) の 4章）。

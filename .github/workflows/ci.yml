@@ -76,3 +76,46 @@ jobs:
       # テストと同時に、カバレッジ（どこまで通ったか）を測る。しきい値を下回ると失敗する（vite.config.ts）
       - run: npm run test:coverage
       - run: npm run build
+
+  # Terraform のコード（terraform/）の点検。AWS には、つながない（認証も秘密も使わない）。
+  # plan と apply は、CI では実行しない（AWS に何かを作る操作は、ユーザーが承認してから、手元で行う）
+  terraform:
+    name: terraform（fmt・validate・tflint・trivy）
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: '1.16.6'
+          terraform_wrapper: false
+      # 書式がそろっているか。ずれていたら、手元で terraform fmt を実行して直す
+      - name: terraform fmt -check
+        run: terraform fmt -check -recursive
+        working-directory: terraform
+      # 文法と、部品の使い方の検査。部品（provider）の取得だけ行い、AWS にはつながない
+      - name: terraform validate
+        run: |
+          terraform init -backend=false -input=false
+          terraform validate
+        working-directory: terraform
+      # 書き方の点検（設定は terraform/.tflint.hcl）
+      - uses: terraform-linters/setup-tflint@6ffdbaa3be476b3431f7275c26966ef32ff60337 # v6.3.2
+        with:
+          tflint_version: v0.65.0
+      - name: tflint
+        run: |
+          tflint --init
+          tflint --format compact
+        working-directory: terraform
+        env:
+          # プラグインの取得で、GitHub の回数制限に当たらないようにするための、読むだけの権限のトークン
+          GITHUB_TOKEN: ${{ github.token }}
+      # セキュリティの弱点。意図した設定は、terraform/.trivyignore に、理由つきで書いてある
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: config
+          scan-ref: terraform
+          trivyignores: terraform/.trivyignore
+          exit-code: '1'
+          hide-progress: true

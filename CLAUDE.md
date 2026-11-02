@@ -75,7 +75,7 @@ Refs #23
 - タイトル：日本語。何をしたかが分かるように書く
 - 本文に、次を書く：`## 内容`、`## 確認したこと`（実行したテストや、動作確認の結果）、**`Closes #Issue番号`**
 - PR を作る前に、**テスト・静的チェック・ビルドを実行**し、結果を `## 確認したこと` に書く（バックエンド：`.\gradlew.bat check`（テストと静的チェック）、画面：`npm test` ／ `npm run lint` ／ `npm run format:check` ／ `npm run build`。文書だけの PR は、リンク切れなどの確認）
-- PR を作ると、CI（GitHub Actions。`.github/workflows/ci.yml`）が、同じ確認（サーバーの `check`、画面の lint・整形・test・build）を自動で走らせる。✗（失敗）が出たら、「Details」で原因を見て直す。**CI は、手元の確認の代わりではない**（見た目の確認など、CI にできないことがある）。`## 確認したこと` には、今までどおり、手元で実行した結果を書く。**CI（`backend` と `frontend`）が、両方 ✓ でないと、マージできない**（3.7）。✗ のときは、直してから、ユーザーに確認を頼む
+- PR を作ると、CI（GitHub Actions。`.github/workflows/ci.yml`）が、同じ確認（サーバーの `check`、画面の lint・整形・test・build）を自動で走らせる。Terraform の点検（`terraform` ジョブ：fmt・validate・tflint・trivy）も走るが、**必須のチェックではない**（3.7）。✗ のときは、同じように原因を見て直す。✗（失敗）が出たら、「Details」で原因を見て直す。**CI は、手元の確認の代わりではない**（見た目の確認など、CI にできないことがある）。`## 確認したこと` には、今までどおり、手元で実行した結果を書く。**CI（`backend` と `frontend`）が、両方 ✓ でないと、マージできない**（3.7）。✗ のときは、直してから、ユーザーに確認を頼む
 - ブラウザで見ないと分からないこと（見た目、ファイルの保存・選択など）は、「**ユーザーの確認が必要**」と、PRの本文に書く。Claude Code が確かめていないことを、確認済みと書かない
 - 本文の最後に、システムから指示された `Generated with Claude Code` の行を付ける
 - **PRのマージと、ブランチの削除は、ユーザーが行う。** Claude Code は、マージしない
@@ -134,6 +134,7 @@ Refs #23
 | 予告（何も作らない） | `terraform plan` | `terraform/`（`terraform.tfvars` に `my_ip` が要る。見本は `terraform.tfvars.example`） |
 | 作る（AWS に実際に作る） | `terraform apply` | **ユーザーの承認のあとだけ** |
 | 消す（作った物を全部消す） | `terraform plan -destroy`（予告）→ `terraform destroy` | **ユーザーの承認のあとだけ** |
+| 書式の確認 | `terraform fmt -check ec2.tf vpc.tf …`（**`.tf` ファイルを指定する**） | `terraform/`（引数なしや `-diff` は、`terraform.tfvars` の中身が画面に出るので、使わない） |
 
 - **`apply` と `destroy` は、ユーザーが承認するまで、実行しない。** 先に `plan` を読み上げて、何が作られる・消されるかを説明する。AWS に何かを作る操作（`aws ... create` など）も同じ
 - **段階的に進める**：EC2 → 確認 → RDS の順に、1段階ずつ。講義で習っていない工程（アプリのデプロイなど）は、ユーザーが決めるまで、進めない
